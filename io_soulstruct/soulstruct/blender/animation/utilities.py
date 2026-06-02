@@ -9,6 +9,7 @@ __all__ = [
     "load_skeleton_hkx_from_path",
     "derive_er_hkx_div_id",
     "get_chr_animation_hkx_entry_path",
+    "resolve_character_anibnd_path",
     "get_armature_frames",
     "get_root_motion",
     "get_animation_name",
@@ -173,6 +174,22 @@ def derive_er_hkx_div_id(anibnd: Binder, model_name: str) -> str:
     if suffix.lower().startswith("div"):
         return suffix.lower() + "_"
     return ""
+
+
+def resolve_character_anibnd_path(settings, model_name: str) -> Path | None:
+    """Return absolute path to a character's ANIBND from game/project roots, if it exists."""
+    from soulstruct.blender.animation.types import SoulstructAnimation
+
+    try:
+        game_anim_info = SoulstructAnimation.GAME_ANIMATION_INFO_CHR[settings.game]
+    except KeyError:
+        return None
+
+    relative_anibnd_path = Path(game_anim_info.relative_binder_path.format(model_name=model_name))
+    try:
+        return settings.get_import_file_path(relative_anibnd_path)
+    except FileNotFoundError:
+        return None
 
 
 def get_chr_animation_hkx_entry_path(

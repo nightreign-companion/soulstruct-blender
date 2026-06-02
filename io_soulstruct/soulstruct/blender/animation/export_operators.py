@@ -56,8 +56,9 @@ class ExportAnyHKXAnimation(LoggingExportOperator):
 
     hkx_skeleton_path: bpy.props.StringProperty(
         name="HKX Skeleton Path",
-        description="Path to matching HKX skeleton file (required for animation export)",
+        description="Path to matching HKX skeleton or character ANIBND (auto-filled from imported FLVER model name)",
         default="",
+        subtype="FILE_PATH",
     )
 
     dcx_type: get_dcx_enum_property()
@@ -77,10 +78,21 @@ class ExportAnyHKXAnimation(LoggingExportOperator):
         return _is_bl_flver_with_animation_data(context.active_object)
 
     def invoke(self, context, _event):
-        """Set default filepath to name of Action after '|' separator, before first space, and without extension."""
+        """Default output name and ANIBND skeleton source from imported FLVER/action."""
+        settings = self.settings(context)
         bl_flver = BlenderFLVER.from_armature_or_mesh(context.active_object)
         bl_animation = SoulstructAnimation(bl_flver.armature.animation_data.action)
-        self.filepath = bl_animation.game_name + ".hkx"
+
+        self.filepath = f"{bl_animation.animation_stem}.hkx"
+        anibnd_path = resolve_character_anibnd_path(settings, bl_flver.game_name)
+        if anibnd_path is not None:
+            self.hkx_skeleton_path = str(anibnd_path)
+        elif not self.hkx_skeleton_path:
+            self.info(
+                f"Could not find ANIBND for '{bl_flver.game_name}' in Game/Project roots. "
+                f"Set HKX Skeleton Path manually in the export dialog."
+            )
+
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
 
@@ -100,9 +112,18 @@ class ExportAnyHKXAnimation(LoggingExportOperator):
 
         animation_file_path = Path(self.filepath)
 
+        if not self.hkx_skeleton_path:
+            anibnd_path = resolve_character_anibnd_path(settings, bl_flver.game_name)
+            if anibnd_path is not None:
+                self.hkx_skeleton_path = str(anibnd_path)
+                self.info(f"Using character ANIBND: {anibnd_path}")
+
         skeleton_path = Path(self.hkx_skeleton_path)
         if not skeleton_path.is_file():
-            return self.error(f"Invalid HKX skeleton path: {skeleton_path}")
+            return self.error(
+                f"Invalid HKX skeleton path: {skeleton_path}. "
+                f"For Elden Ring characters, use chr\\{{model}}.anibnd.dcx (e.g. chr\\c7720.anibnd.dcx)."
+            )
 
         try:
             skeleton_hkx = load_skeleton_hkx_from_path(skeleton_path, settings.game)
