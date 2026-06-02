@@ -190,7 +190,7 @@ class SoulstructAnimation:
         previewed by the root motion bone instead of the object itself. (Note that Cutscene animations do NOT use this,
         as their root
         """
-        operator.info(f"Importing HKX animation to Armature '{armature_obj.name}': '{name}'")
+        operator.info(f"Importing HKX animation to Armature '{armature_obj.name}': '{name}' (30 FPS, 1:1 frames)")
 
         # We cannot rely on track annotations for bone names in all games (e.g. Demon's Souls, Elden Ring).
         # In Elden Ring, some HKX skeletons also animate 'Twist' bones that are not actually present in the FLVER. We
@@ -293,9 +293,8 @@ class SoulstructAnimation:
             get the armature-space pose matrix (forward kinematics).
         """
 
-        # TODO: Assumes source is 30 FPS, which is probably always true with FromSoft?
-        to_60_fps = context.scene.animation_import_settings.to_60_fps
-        bl_frames_per_game_frame = 2.0 if to_60_fps else 1.0
+        # FromSoft character animations are 30 Hz; one Blender frame per game sample.
+        bl_frames_per_game_frame = 1.0
 
         if root_motion is not None:
             if root_motion.ndim != 2:
@@ -311,7 +310,7 @@ class SoulstructAnimation:
             elif arma_frames and len(root_motion) != len(arma_frames):
                 # Root motion is at a lesser (or possibly greater?) sample rate than bone animation. For example, if
                 # only two root motion samples are given, they will be scaled to match the first and last frame of
-                # `arma_frames`. This scaling stacks with the intrinsic `bone_frame_scaling` (e.g. 2 for 60 FPS).
+                # `arma_frames`.
                 keyframe_t_column *= len(arma_frames) / (root_motion.shape[0] - 1)
             root_motion = np.hstack([keyframe_t_column[:, None], root_motion])
 
@@ -362,6 +361,10 @@ class SoulstructAnimation:
         context.scene.frame_start = int(action.frame_range[0])
         context.scene.frame_end = int(action.frame_range[1])
         context.scene.frame_set(context.scene.frame_start)
+
+        if context.scene.render.fps != 30 or context.scene.render.fps_base != 1:
+            context.scene.render.fps = 30
+            context.scene.render.fps_base = 1
 
         return cls(action)
 
@@ -598,7 +601,7 @@ class SoulstructAnimation:
         `bone_basis_samples` should map bone names to a `frame_count x 11` array of data, where the 11 columns are:
             keyframe_t, location XYZ, quaternion WXYZ, scale XYZ
         Here, the `t` column should already be scaled as desired for the frame rate conversion, e.g. (0, 2, 4, ...)
-        when converting 30 to 60 FPS.
+        at 30 FPS (one Blender frame per game sample).
 
         If `root_motion_bone_name` is given (non-empty), root motion will be applied to the bone with that name.
         Otherwise, it will be applied directly to the object's local transform (location and Z-axis rotation).
@@ -698,15 +701,7 @@ class SoulstructAnimation:
 
         # TODO: Technically, animation export only needs a start/end frame range, since it samples location/bone pose
         #  on every single frame anyway and does NOT need to actually use the action FCurves!
-
-        # Determine the frame range.
-        # TODO: Export bool option to just read from current scene values, rather than checking action.
-        if export_settings.selected_frames_only:
-            start_frame = context.scene.frame_start
-            end_frame = context.scene.frame_end
-        else:
-            start_frame = int(min(fcurve.range()[0] for fcurve in self.action.fcurves))
-            end_frame = int(max(fcurve.range()[1] for fcurve in self.action.fcurves))
+        start_frame, end_frame = self.get_export_frame_range(context, armature, export_settings)
 
         # All frame interleaved transforms, in armature space.
         root_motion_samples = []  # type: list[tuple[float, float, float, float]]
@@ -726,12 +721,7 @@ class SoulstructAnimation:
         }
 
         # Evaluate all curves at every frame, inclusive of `end_frame`.
-        for i, frame in enumerate(range(start_frame, end_frame + 1)):
-
-            if export_settings.from_60_fps and i % 2 == 1:
-                # Skip every second frame to convert 60 FPS to 30 FPS (frame 0 should generally be keyframed).
-                continue
-
+        for frame in range(start_frame, end_frame + 1):
             bpy.context.scene.frame_set(frame)
             armature_space_frame = []  # type: list[TRSTransform]
 
@@ -750,7 +740,7 @@ class SoulstructAnimation:
                     bl_bone = bl_bones_by_name[bone.name]
                 except KeyError:
                     # Ignore bone missing from FLVER Armature.
-                    if i == 0:
+                    if frame == start_frame:
                         # Only emit warning on first frame.
                         operator.warning(
                             f"Bone '{bone.name}' in HKX skeleton not found in Blender armature. Identity animation "
@@ -760,7 +750,7 @@ class SoulstructAnimation:
                     armature_space_transform = TRSTransform.identity()
                 else:
                     armature_space_transform = bl_matrix_to_game_trs(bl_bone.matrix)
-                    if i > 0:
+                    if frame > start_frame:
                         # Negate rotation quaternion if dot with last rotation is negative (first frame ignored).
                         dot = np.dot(armature_space_transform.rotation.data, last_bone_trs[bone.name].rotation.data)
                         if dot < 0:
@@ -848,6 +838,48 @@ class SoulstructAnimation:
     # endregion
 
     # region Utilities
+
+    @staticmethod
+    def iter_action_fcurves(
+        action: bpy.types.Action,
+        action_slot: bpy.types.ActionSlot | None = None,
+    ) -> tp.Iterable[bpy.types.FCurve]:
+        """Yield F-Curves from legacy `action.fcurves` or Blender 5+ layered channelbags."""
+        legacy_fcurves = getattr(action, "fcurves", None)
+        if legacy_fcurves is not None:
+            yield from legacy_fcurves
+            return
+        for layer in getattr(action, "layers", []):
+            for strip in getattr(layer, "strips", []):
+                channelbag = None
+                if action_slot is not None and hasattr(strip, "channelbag"):
+                    channelbag = strip.channelbag(action_slot, ensure=False)
+                if channelbag is None and hasattr(strip, "channelbags") and strip.channelbags:
+                    channelbag = strip.channelbags[0]
+                if channelbag is not None:
+                    yield from channelbag.fcurves
+
+    def get_export_frame_range(
+        self,
+        context: Context,
+        armature: ArmatureObject,
+        export_settings,
+    ) -> tuple[int, int]:
+        if export_settings.selected_frames_only:
+            return context.scene.frame_start, context.scene.frame_end
+
+        action_slot = (
+            armature.animation_data.action_slot
+            if armature.animation_data
+            else None
+        )
+        fcurves = list(self.iter_action_fcurves(self.action, action_slot))
+        if fcurves:
+            return (
+                int(min(fcurve.range()[0] for fcurve in fcurves)),
+                int(max(fcurve.range()[1] for fcurve in fcurves)),
+            )
+        return context.scene.frame_start, context.scene.frame_end
 
     def set_scene_frame_range(self, context: bpy.types.Context, reset_current_frame=True):
         """Set Blender scene frame range to match this animation, and set start frame as current."""

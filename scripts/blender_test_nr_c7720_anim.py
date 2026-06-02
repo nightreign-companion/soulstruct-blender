@@ -56,7 +56,7 @@ def _setup_python_path(repo: Path) -> None:
 
 def _register_minimal_scene_props() -> None:
     import bpy
-    from soulstruct.blender.animation.properties import AnimationImportSettings
+    from soulstruct.blender.animation.properties import AnimationExportSettings
     from soulstruct.blender.flver.material.properties import (
         FLVERGXItemProps,
         FLVERMaterialProps,
@@ -81,7 +81,7 @@ def _register_minimal_scene_props() -> None:
         FLVERImportSettings,
         FLVERMaterialProps,
         FLVERMaterialSettings,
-        AnimationImportSettings,
+        AnimationExportSettings,
         SoulstructSettings,
     ):
         try:
@@ -93,8 +93,8 @@ def _register_minimal_scene_props() -> None:
         bpy.types.Scene.flver_import_settings = bpy.props.PointerProperty(type=FLVERImportSettings)
     if not hasattr(bpy.types.Scene, "flver_material_settings"):
         bpy.types.Scene.flver_material_settings = bpy.props.PointerProperty(type=FLVERMaterialSettings)
-    if not hasattr(bpy.types.Scene, "animation_import_settings"):
-        bpy.types.Scene.animation_import_settings = bpy.props.PointerProperty(type=AnimationImportSettings)
+    if not hasattr(bpy.types.Scene, "animation_export_settings"):
+        bpy.types.Scene.animation_export_settings = bpy.props.PointerProperty(type=AnimationExportSettings)
     if not hasattr(bpy.types.Scene, "soulstruct_settings"):
         bpy.types.Scene.soulstruct_settings = bpy.props.PointerProperty(type=SoulstructSettings)
 
@@ -306,6 +306,7 @@ def main() -> int:
     imp = bpy.context.scene.flver_import_settings
     imp.import_textures = False
     imp.merge_mesh_vertices = True
+
     imp.omit_default_bone = False
     imp.add_name_suffix = False
 

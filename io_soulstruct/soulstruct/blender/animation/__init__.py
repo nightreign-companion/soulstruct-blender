@@ -15,7 +15,6 @@ __all__ = [
     "ArmatureActionChoiceOperator",
     "SelectArmatureActionOperator",
 
-    "AnimationImportSettings",
     "AnimationExportSettings",
 
     "SoulstructAnimation",

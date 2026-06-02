@@ -154,12 +154,6 @@ class ExportHKXAnimationIntoAnyBinder(LoggingImportOperator):
 
     dcx_type: get_dcx_enum_property()
 
-    from_60_fps: bpy.props.BoolProperty(
-        name="From 60 FPS",
-        description="Scale animation keyframes from 60 FPS in Blender down to 30 FPS",
-        default=True,
-    )
-
     animation_id: bpy.props.IntProperty(
         name="Animation ID",
         description="Animation ID for name and Binder entry ID to use",

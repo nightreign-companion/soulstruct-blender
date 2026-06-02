@@ -314,14 +314,10 @@ select a Character or Object/Asset FLVER in Blender (`Mesh` or its parent `Armat
 `Import Object/Asset Anim` operators will become available in the `Animation` tab. These will automatically find the
 associated `ANIBND` and offer a choice of animations from inside it to import.
 
-FromSoft animations are 30 FPS for all games, but will be converted to 60 FPS in Blender by interpolating every second
-frame as long as `To 60 FPS` is enabled. **Make sure the Frame Rate is set to 60 FPS in the `Scene` Properties Panel to
-view these animations properly:**
+FromSoft animations are **30 FPS** for all games. Import uses **one Blender frame per game sample** and sets the scene
+to **30 fps** (same timing as DSAS). Confirm **Scene → Format → Frame Rate** is **30 fps** if playback looks wrong:
 
 ![anim_frame_rate.png](images/anim_frame_rate.png)
-
-Of course, you could disable `To 60 FPS` and set the Scene frame rate to 30 as well, but the animations will look like
-they're playing (unsurprisingly) at 30 FPS, even though their speed is correct.
 
 There isn't much more to say about animations. Some miscellaneous points:
 - Fortunately, the format hasn't changed much between Dark Souls 1 and Elden Ring.

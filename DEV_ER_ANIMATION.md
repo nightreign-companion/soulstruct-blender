@@ -264,19 +264,13 @@ before the next step.
 4. In the popup list, choose an animation entry (e.g. `a000_000020.hkx` inside
    `c7720.anibnd`).
 
-**4. Playback frame rate**
+**4. Timing (30 Hz, 1:1 frames)**
 
-The add-on converts game **30 FPS** data to **60 FPS** keyframes by default (`To 60 FPS`).
+Game animations are **30 Hz** (same as **DSAS**). Import places one Blender keyframe per
+game sample and sets the scene to **30 fps**. Blender frame **N** = game sample **N**.
+Re-import clips if you imported before this behavior was enforced.
 
-Set Blender’s scene rate so playback looks correct:
-
-- **Properties** editor → **Scene** (render/scene icon) → **Format** section → **`Frame Rate`**
-  → **`60 fps`**.
-
-(You can also use the Timeline footer dropdown if your Blender version exposes FPS there.)
-
-Press **Space** in the 3D View with the armature selected and the imported action assigned
-to preview the animation.
+Press **Space** with the armature selected to preview.
 
 ### Headless smoke tests (no UI)
 
@@ -299,7 +293,7 @@ stubs MSB modules so it does not hit the MSB GPU draw import (full add-on enable
 requires the GUI).
 
 Verified on `c7720`: spline `a000_000020.hkx` → Blender action `c7720|a000_000020`,
-scene frame end **140** at 60 FPS (71 game frames × 2).
+scene frame end **70** at 30 fps (71 game frames, 1:1).
 
 ### Remaining "make import bulletproof" items (code, not UI)
 

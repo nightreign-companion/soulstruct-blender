@@ -280,7 +280,6 @@ CLASSES = (
     ExportCharacterHKXAnimation,
     ExportObjectHKXAnimation,
 
-    AnimationImportSettings,
     AnimationExportSettings,
 
     ArmatureActionChoiceOperator,
@@ -554,7 +553,6 @@ SCENE_POINTERS = dict(
     find_msb_parts_pointer=MSBFindPartsPointer,
     msb_tool_settings=MSBToolSettings,
     region_draw_settings=RegionDrawSettings,
-    animation_import_settings=AnimationImportSettings,
     animation_export_settings=AnimationExportSettings,
     # TODO: Cutscene disabled.
     # cutscene_import_settings=CutsceneImportSettings,
