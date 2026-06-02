@@ -77,7 +77,7 @@ class SoulstructPanel(bpy.types.Panel):
         map_box.prop(context.scene.soulstruct_settings, "map_stem", text="")
 
 
-        if context.scene.soulstruct_settings.is_game("ELDEN_RING"):
+        if context.scene.soulstruct_settings.is_er_family():
             map_box.label(text="ER Map Selection Filter:")
             map_box.prop(context.scene.soulstruct_settings, "er_map_filter_mode", text="")
 

@@ -120,6 +120,7 @@ for module_name in list(sys.modules.keys()):
 
 
 from soulstruct.blender.general import *
+from soulstruct.blender.stan_tools import *
 from soulstruct.blender.misc import *
 
 from soulstruct.blender.animation import *
@@ -185,6 +186,18 @@ CLASSES = (
     SelectCustomMTDBNDFile,
     SelectCustomMATBINBNDFile,
     LoadCollectionsFromBlend,
+    # endregion
+
+    # region Stan's Tools
+    StanSetupPanel,
+    StanCharactersPanel,
+    StanAnimationPanel,
+    AutoDetectGameDirectory,
+    StanSearchCharacterToImport,
+    StanSearchCharacterAnimation,
+    StanRefreshNpcParamList,
+    StanApplyNpcParamDrawMask,
+    StanShowAllCharacterMeshes,
     # endregion
 
     # region FLVER / Materials / Textures
@@ -281,6 +294,7 @@ CLASSES = (
     ExportObjectHKXAnimation,
 
     AnimationExportSettings,
+    StanToolsSettings,
 
     ArmatureActionChoiceOperator,
     SelectArmatureActionOperator,
@@ -554,6 +568,7 @@ SCENE_POINTERS = dict(
     msb_tool_settings=MSBToolSettings,
     region_draw_settings=RegionDrawSettings,
     animation_export_settings=AnimationExportSettings,
+    stan_tools_settings=StanToolsSettings,
     # TODO: Cutscene disabled.
     # cutscene_import_settings=CutsceneImportSettings,
     # cutscene_export_settings=CutsceneExportSettings,

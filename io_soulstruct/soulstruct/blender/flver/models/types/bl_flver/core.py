@@ -456,7 +456,19 @@ class BlenderFLVER(BaseBlenderSoulstructObject[FLVER, FLVERProps]):
             armature = mesh.parent if mesh.parent is not None and mesh.parent.type == "ARMATURE" else None
         elif obj.type == "ARMATURE":
             armature = obj
-            mesh_children = [child for child in armature.children if child.type == "MESH"]
+            mesh_children = [
+                child
+                for child in armature.children
+                if child.type == "MESH"
+                and child.soulstruct_type == SoulstructType.FLVER
+                and not child.get("stan_source_mesh")
+            ]
+            if not mesh_children:
+                mesh_children = [
+                    child
+                    for child in armature.children
+                    if child.type == "MESH" and child.soulstruct_type == SoulstructType.FLVER
+                ]
             if not mesh_children or mesh_children[0].soulstruct_type != SoulstructType.FLVER:
                 raise SoulstructTypeError(
                     f"Armature '{armature.name}' has no FLVER Mesh child. Please create it, even if empty, and set its "

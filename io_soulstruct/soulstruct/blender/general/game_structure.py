@@ -81,7 +81,7 @@ class GameStructure:
         if not map_stem:
             return None
 
-        if self.settings.is_game(ELDEN_RING):
+        if self.settings.is_er_family():
             # Area subfolders in 'map'.
             relative_file_path = Path(f"map/{map_stem[:3]}/{map_stem}", *parts)
         else:
@@ -110,7 +110,7 @@ class GameStructure:
 
         # No smart map version handling without any file.
 
-        if self.settings.is_game(ELDEN_RING):
+        if self.settings.is_er_family():
             # Area subfolders in 'map'.
             dir_path = Path(self.root, f"map/{map_stem[:3]}/{map_stem}")
         else:

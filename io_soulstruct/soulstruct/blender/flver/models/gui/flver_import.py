@@ -6,7 +6,7 @@ __all__ = [
 
 from soulstruct.blender.bpy_base.panel import SoulstructPanel
 
-from ..operators.import_operators import *
+from ..operators import *
 
 
 class FLVERImportPanel(SoulstructPanel):
@@ -29,7 +29,7 @@ class FLVERImportPanel(SoulstructPanel):
         layout.label(text="Import from Game/Project:")
         layout.operator(ImportMapPieceFLVER.bl_idname)
         layout.operator(ImportCharacterFLVER.bl_idname)
-        if settings.is_game("ELDEN_RING"):
+        if settings.is_er_family():
             layout.operator(ImportAssetFLVER.bl_idname)
         else:
             layout.operator(ImportObjectFLVER.bl_idname)

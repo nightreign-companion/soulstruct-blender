@@ -232,4 +232,15 @@ BLENDER_GAME_CONFIG = {
         animation_hkx_class=hk_fromsoft.eldenring.AnimationHKX,
         supports_collision_model=False,
     ),
+    NIGHTREIGN: BlenderGameConfig(
+        flver_default_version=FLVERVersion.Nightreign,
+        uses_matbin=True,
+        matdef_class=eldenring.models.MatDef,
+        msb_class=eldenring.maps.MSB,
+        map_constants=eldenring.maps.constants,
+        havok_module=HavokModule.hk2018,
+        skeleton_hkx_class=hk_fromsoft.eldenring.SkeletonHKX,
+        animation_hkx_class=hk_fromsoft.eldenring.AnimationHKX,
+        supports_collision_model=False,
+    ),
 }

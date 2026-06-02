@@ -4,6 +4,7 @@ __all__ = [
     "get_flvers_from_binder",
     "BONE_CoB_4x4",
     "game_bone_transform_to_bl_bone_matrix",
+    "bl_bone_matrix_to_game_trs",
     "get_armature_matrix",
     "get_basis_matrix",
     "game_forward_up_vectors_to_bl_euler",
@@ -18,6 +19,7 @@ from mathutils import Euler, Matrix
 from soulstruct.containers import Binder
 from soulstruct.flver import FLVER
 from soulstruct.utilities.maths import EulerRad, Vector3, Matrix3
+from soulstruct.havok.utilities.maths import TRSTransform
 
 from soulstruct.blender.exceptions import *
 from soulstruct.blender.types import ArmatureObject
@@ -69,6 +71,19 @@ def game_bone_transform_to_bl_bone_matrix(
         bl_transform[i][i] *= bl_scale[i]
     # Apply CoB matrix to swap X and Y and negate Z.
     return bl_transform @ BONE_CoB_4x4
+
+
+def bl_bone_matrix_to_game_trs(matrix: Matrix) -> TRSTransform:
+    """Convert a Blender bone matrix (armature space with bone CoB applied) to a game `TRSTransform`.
+
+    Inverse of `game_bone_transform_to_bl_bone_matrix()`. Undo the bone CoB, decompose, and convert to game space.
+    """
+    matrix = matrix @ BONE_CoB_4x4.inverted()
+    bl_translate, bl_rotate, bl_scale = matrix.decompose()
+    game_translate = to_game(bl_translate)
+    game_rotate = to_game(bl_rotate)
+    game_scale = to_game(bl_scale)
+    return TRSTransform(game_translate, game_rotate, game_scale)
 
 
 def get_armature_matrix(armature: ArmatureObject, bone_name: str, basis=None) -> Matrix:

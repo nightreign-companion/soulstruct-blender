@@ -1,0 +1,145 @@
+"""Character search/import helpers and Stan's Tools character import operator."""
+from __future__ import annotations
+
+__all__ = [
+    "StanSearchCharacterToImport",
+    "build_character_search_items",
+    "_iter_chr_directories",
+]
+
+import re
+from pathlib import Path
+
+import bpy
+
+from soulstruct.blender.general.character_names import get_character_name_map
+from soulstruct.blender.flver.models.operators.import_operators import ImportCharacterFLVER
+
+_CHR_BND_RE = re.compile(r"^(c\d{4})\.chrbnd(\.dcx)?(\.bak)?$", re.IGNORECASE)
+
+
+def _iter_chr_directories(settings) -> list[Path]:
+    """All chr/ folders under configured import roots (game + project), in import preference order."""
+    chr_dirs: list[Path] = []
+    seen: set[str] = set()
+    for root in settings.import_roots:
+        if root is None:
+            continue
+        chr_dir = root.root / "chr"
+        key = str(chr_dir).lower()
+        if chr_dir.is_dir() and key not in seen:
+            seen.add(key)
+            chr_dirs.append(chr_dir)
+    return chr_dirs
+
+
+def build_character_search_items(context: bpy.types.Context) -> list[tuple[str, str, str]]:
+    settings = context.scene.soulstruct_settings
+    chr_dirs = _iter_chr_directories(settings)
+
+    if not settings.game_root_path and not settings.project_root_path:
+        return [("", "<set Game Root in Stan's Tools / Settings>", "")]
+
+    if not chr_dirs:
+        game = settings.game_root_path or "(not set)"
+        project = settings.project_root_path or "(not set)"
+        return [
+            (
+                "",
+                f"<no chr/ folder — Game: {game} | Project: {project}>",
+                "Unpack game files (UXM) so Game/chr exists, or point Game Root at .../NIGHTREIGN/Game",
+            )
+        ]
+
+    names = get_character_name_map(settings)
+    items: list[tuple[str, str, str]] = []
+    seen_stems: set[str] = set()
+
+    for chr_dir in chr_dirs:
+        for path in sorted(chr_dir.iterdir()):
+            match = _CHR_BND_RE.match(path.name)
+            if not match:
+                continue
+            stem = match.group(1).lower()
+            if stem in seen_stems:
+                continue
+            seen_stems.add(stem)
+            try:
+                model_num = int(stem[1:])
+            except ValueError:
+                continue
+            display = names.get(model_num)
+            if display:
+                label = f"{stem} - {display}"
+            else:
+                label = stem
+            items.append((stem, label, label))
+
+    if not items:
+        roots = ", ".join(str(d) for d in chr_dirs)
+        return [("", f"<no c####.chrbnd in chr/ at {roots}>", "")]
+
+    return items
+
+
+class StanSearchCharacterToImport(ImportCharacterFLVER):
+    """Import a character FLVER by searchable name/id (Stan's Tools only)."""
+
+    bl_idname = "stan_tools.search_character"
+    bl_label = "Search Character by Name"
+    bl_description = (
+        "Search characters in game/project chr\\ by name or c#### id, then import the model only "
+        "(use Load Character Animation afterward)"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    bl_property = "character"
+
+    _search_items: list[tuple[str, str, str]] = [("", "", "")]
+
+    def _character_enum_items(self, context):
+        return StanSearchCharacterToImport._search_items
+
+    character: bpy.props.EnumProperty(
+        name="Character",
+        description="Character model to import (c####)",
+        items=_character_enum_items,
+    )
+
+    @classmethod
+    def poll(cls, context) -> bool:
+        return cls.settings(context).has_import_dir_path("chr")
+
+    def invoke(self, context, event):
+        StanSearchCharacterToImport._search_items = build_character_search_items(context)
+        if len(StanSearchCharacterToImport._search_items) == 1 and not StanSearchCharacterToImport._search_items[0][0]:
+            return self.error(StanSearchCharacterToImport._search_items[0][1])
+        context.window_manager.invoke_search_popup(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        if not self.character:
+            return self.error("No character selected.")
+
+        settings = self.settings(context)
+        try:
+            chrbnd_path = settings.get_import_file_path(Path("chr") / f"{self.character}.chrbnd")
+        except FileNotFoundError as ex:
+            return self.error(f"Cannot find CHRBND for {self.character}: {ex}")
+
+        if not chrbnd_path.is_file():
+            return self.error(f"CHRBND not found: {chrbnd_path}")
+
+        self.directory = chrbnd_path.parent.as_posix() + "/"
+        self.files.clear()
+        file_elem = self.files.add()
+        file_elem.name = chrbnd_path.name
+
+        result = super().execute(context)
+        if result == {"FINISHED"}:
+            stan = context.scene.stan_tools_settings
+            stan.refresh_npc_param_list(context, self.character)
+            err = stan.apply_active_npc_param(context)
+            if err:
+                self.warning(f"{err} (mesh visibility may need Apply NPC Param Visibility)")
+        return result

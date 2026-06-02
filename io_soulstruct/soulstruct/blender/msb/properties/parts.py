@@ -549,6 +549,10 @@ class MSBAssetProps(SoulstructPropertyGroup):
             "is_dummy",
             "draw_parent",
         ),
+        NIGHTREIGN: (
+            "is_dummy",
+            "draw_parent",
+        ),
     }
 
     is_dummy: bpy.props.BoolProperty(

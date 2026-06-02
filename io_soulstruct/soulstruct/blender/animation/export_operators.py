@@ -8,6 +8,7 @@ __all__ = [
 ]
 
 import re
+import subprocess
 import traceback
 import typing as tp
 from pathlib import Path
@@ -28,6 +29,37 @@ from .types import SoulstructAnimation
 
 
 SKELETON_ENTRY_RE = re.compile(r"skeleton\.hkx", re.IGNORECASE)
+
+
+def _resolve_animation_hkx_dcx_type(settings, dcx_type_name: str) -> DCXType:
+    """HKX clips inside ANIBND are never DCX-wrapped; only the outer binder uses KRAK."""
+    if dcx_type_name == "AUTO":
+        game_anim_info = SoulstructAnimation.GAME_ANIMATION_INFO_CHR.get(settings.game)
+        if game_anim_info is not None:
+            return game_anim_info.dcx_type
+        return settings.resolve_dcx_type(dcx_type_name, "hkx")
+    return DCXType.from_member_name(dcx_type_name)
+
+
+def _format_export_exception(ex: BaseException) -> str:
+    """Blender often shows `str(RuntimeError())` as empty when the real detail is on `__cause__`."""
+    if str(ex):
+        text = f"{type(ex).__name__}: {ex}"
+    else:
+        text = f"{type(ex).__name__} (no message — see System Console for traceback)"
+    cause = ex.__cause__
+    if cause is not None:
+        if isinstance(cause, subprocess.CalledProcessError):
+            text += (
+                f" | CompressAnim exit {cause.returncode} ({cause.returncode:#x})"
+            )
+            if cause.output:
+                text += f" | {cause.output.decode(errors='replace').strip()[:300]}"
+        elif str(cause):
+            text += f" | caused by {type(cause).__name__}: {cause}"
+        else:
+            text += f" | caused by {type(cause).__name__}"
+    return text
 
 
 def _is_bl_flver_with_animation_data(obj: bpy.types.Object) -> tp.TypeGuard[MeshObject]:
@@ -61,7 +93,13 @@ class ExportAnyHKXAnimation(LoggingExportOperator):
         subtype="FILE_PATH",
     )
 
-    dcx_type: get_dcx_enum_property()
+    dcx_type: get_dcx_enum_property(
+        default=DCXType.Null.name,
+        description=(
+            "DCX compression for the loose file. Use None for Elden Ring / Nightreign animation HKX "
+            "(game ANIBND entries are uncompressed .hkx; only the outer .anibnd.dcx is KRAK)."
+        ),
+    )
 
     force_interleaved: bpy.props.BoolProperty(
         name="Force Interleaved",
@@ -153,13 +191,21 @@ class ExportAnyHKXAnimation(LoggingExportOperator):
             )
         except Exception as ex:
             traceback.print_exc()
-            return self.error(f"Failed to create animation HKX. Error: {ex}")
+            return self.error(f"Failed to create animation HKX. {_format_export_exception(ex)}")
         finally:
             context.scene.frame_set(current_frame)
 
-        dcx_type = settings.resolve_dcx_type(self.dcx_type, "hkx")
+        dcx_type = _resolve_animation_hkx_dcx_type(settings, self.dcx_type)
         animation_hkx.dcx_type = dcx_type
+        if animation_file_path.suffix == ".dcx" and dcx_type == DCXType.Null:
+            animation_file_path = animation_file_path.with_suffix("")  # user picked .hkx.dcx in dialog
         animation_hkx.write(animation_file_path)
+        if dcx_type != DCXType.Null:
+            self.warning(
+                f"Wrote DCX-compressed animation at '{animation_file_path}'. "
+                f"ANIBND entries must be uncompressed .hkx (Compression = None). "
+                f"Use Export Character Anim or re-export with Compression = None."
+            )
 
         return {"FINISHED"}
 
@@ -243,7 +289,7 @@ class ExportHKXAnimationIntoAnyBinder(LoggingImportOperator):
             skeleton_entry = binder[SKELETON_ENTRY_RE]
         except EntryNotFoundError:
             return self.error("Could not find 'skeleton.hkx' in binder.")
-        compendium = load_anibnd_compendium(binder) if settings.game is ELDEN_RING else None
+        compendium = load_anibnd_compendium(binder) if settings.is_er_family() else None
         skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         animation_name = get_animation_name(self.animation_id, self.name_template[1:], prefix=self.name_template[0])
@@ -262,11 +308,11 @@ class ExportHKXAnimationIntoAnyBinder(LoggingImportOperator):
             )
         except Exception as ex:
             traceback.print_exc()
-            return self.error(f"Failed to create animation HKX. Error: {ex}")
+            return self.error(f"Failed to create animation HKX. {_format_export_exception(ex)}")
         finally:
             context.scene.frame_set(current_frame)
 
-        dcx_type = DCXType.Null if self.dcx_type == "AUTO" else DCXType.from_member_name(self.dcx_type)
+        dcx_type = _resolve_animation_hkx_dcx_type(settings, self.dcx_type)
         animation_hkx.dcx_type = dcx_type
         entry_path = self.default_entry_path + animation_name + (".hkx" if dcx_type == DCXType.Null else ".hkx.dcx")
         # Update or create binder entry.
@@ -351,7 +397,7 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
             skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
         except EntryNotFoundError:
             return self.error("Could not find 'skeleton.hkx' (case-insensitive) in ANIBND.")
-        compendium = load_anibnd_compendium(anibnd) if settings.game is ELDEN_RING else None
+        compendium = load_anibnd_compendium(anibnd) if settings.is_er_family() else None
         skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         # Get animation stem from action name. We will re-format its ID in the selected game's known format (e.g. to
@@ -422,11 +468,11 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
             )
         except Exception as ex:
             traceback.print_exc()
-            return self.error(f"Failed to create animation HKX. Error: {ex}")
+            return self.error(f"Failed to create animation HKX. {_format_export_exception(ex)}")
         finally:
             context.scene.frame_set(current_frame)
 
-        animation_hkx.dcx_type = game_anim_info.dcx_type
+        animation_hkx.dcx_type = _resolve_animation_hkx_dcx_type(settings, "AUTO")
         entry_path = get_chr_animation_hkx_entry_path(
             settings.game,
             game_anim_info,
@@ -442,6 +488,11 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
 
         # Write modified ANIBND.
         exported_paths = settings.export_file(self, anibnd, relative_anibnd_path)
+        if exported_paths:
+            export_settings = context.scene.animation_export_settings
+            if export_settings.auto_repack_to_mod:
+                settings.copy_exported_file_to_mod_root(self, exported_paths, relative_anibnd_path)
+
         return {"FINISHED" if exported_paths else "CANCELLED"}
 
 
@@ -533,7 +584,7 @@ class ExportObjectHKXAnimation(BaseExportTypedHKXAnimation):
             )
         except Exception as ex:
             traceback.print_exc()
-            return self.error(f"Failed to create animation HKX. Error: {ex}")
+            return self.error(f"Failed to create animation HKX. {_format_export_exception(ex)}")
         finally:
             context.scene.frame_set(current_frame)
 

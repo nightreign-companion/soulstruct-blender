@@ -27,6 +27,7 @@ from soulstruct.blender.utilities import *
 
 from .types import SoulstructAnimation
 from .utilities import *
+from .utilities import import_character_hkx_animation_entry, load_character_anibnd_bundle  # noqa: F401
 
 ANIBND_RE = re.compile(r"^.*?\.anibnd(\.dcx)?$")
 c0000_ANIBND_RE = re.compile(r"^c0000_.*\.anibnd(\.dcx)?$")
@@ -105,39 +106,17 @@ class ImportHKXAnimationWithBinderChoice(BaseImportHKXAnimation, BinderEntrySele
 
     def _import_entry(self, context, entry: BinderEntry):
         """Import the chosen HKX animation entry."""
-
-        p = time.perf_counter()
-        animation_hkx = read_animation_hkx_entry(entry, self.HKX_COMPENDIUM)
-        self.info(f"Read `AnimationHKX` Binder entry '{entry.name}' in {time.perf_counter() - p:.3f} s.")
-        # `skeleton_hkx` already set to operator.
-
-        if self.PART_MESH_OBJ and not self.ARMATURE_OBJ.animation_data:
-            # First time creating animation data on MSB Part. We record its last transform for MSB export.
-            self.PART_MESH_OBJ["MSB Translate"] = self.ARMATURE_OBJ.location
-            self.PART_MESH_OBJ["MSB Rotate"] = self.ARMATURE_OBJ.rotation_euler
-            self.PART_MESH_OBJ["MSB Scale"] = self.ARMATURE_OBJ.scale
-
-        anim_name = entry.name.split(".")[0]
-        try:
-            self.info(f"Creating animation '{anim_name}' in Blender.")
-            # noinspection PyTypeChecker
-            SoulstructAnimation.new_from_hkx_animation(
-                self,
-                context,
-                animation_hkx,
-                skeleton_hkx=self.SKELETON_HKX,
-                name=anim_name,
-                armature_obj=self.ARMATURE_OBJ,
-                model_name=self.MODEL_NAME,
-            )
-        except Exception as ex:
-            traceback.print_exc()
-            return self.error(
-                f"Cannot import HKX animation {anim_name} from '{self.BINDER.path_name}'. Error: {ex}"
-            )
-        self.debug(f"Created animation action in {time.perf_counter() - p:.3f} s.")
-
-        return {"FINISHED"}
+        return import_character_hkx_animation_entry(
+            self,
+            context,
+            entry=entry,
+            binder=self.BINDER,
+            armature_obj=self.ARMATURE_OBJ,
+            part_mesh_obj=self.PART_MESH_OBJ,
+            model_name=self.MODEL_NAME,
+            skeleton_hkx=self.SKELETON_HKX,
+            compendium=self.HKX_COMPENDIUM,
+        )
 
     @classmethod
     def run(
@@ -328,33 +307,10 @@ class ImportCharacterHKXAnimation(BaseImportTypedHKXAnimation):
         self, context: bpy.types.Context, model_name: str
     ) -> tuple[Binder, SKELETON_TYPING, HKX | None]:
         settings = self.settings(context)
-
-        try:
-            game_anim_info = SoulstructAnimation.GAME_ANIMATION_INFO_CHR[settings.game]
-        except KeyError:
-            raise AnimationImportError(f"Game '{settings.game}' is not supported for character animation import.")
-
-        # Even if a sub-ANIBND for c0000 has been chosen, we need the main one for the skeleton (but not compendium).
-        relative_anibnd_path = Path(game_anim_info.relative_binder_path.format(model_name=model_name))
-        anibnd_path = settings.get_import_file_path(relative_anibnd_path)
-        if not anibnd_path or not anibnd_path.is_file():
-            raise FileNotFoundError(f"Cannot find ANIBND for character '{model_name}' in game directory.")
-        skeleton_anibnd = anibnd = DivBinder.from_path(anibnd_path)
-
-        if self.sub_c0000_binder != "None":
-            # Importing from c0000 sub-ANIBND.
-            anibnd_path = settings.get_import_file_path(
-                game_anim_info.relative_binder_path.format(model_name=self.sub_c0000_binder)
-            )
-            if not anibnd_path or not anibnd_path.is_file():
-                raise FileNotFoundError(f"Cannot find ANIBND to import for c0000 sub-ANIBND '{self.sub_c0000_binder}'.")
-            # NOTE: Compendium is in sub-ANIBND in relevant games.
-            anibnd = DivBinder.from_path(anibnd_path)  # probably not `DivBinder`, but harmless
-
-        self.info(f"Importing animation(s) from ANIBND: {anibnd_path}")
-
-        compendium = self.load_binder_compendium(anibnd)
-        skeleton_hkx = self.read_skeleton(skeleton_anibnd, compendium)
+        anibnd, skeleton_hkx, compendium = load_character_anibnd_bundle(
+            settings, model_name, sub_c0000_binder=self.sub_c0000_binder
+        )
+        self.info(f"Importing animation(s) from ANIBND: {anibnd.path}")
         return anibnd, skeleton_hkx, compendium
 
 

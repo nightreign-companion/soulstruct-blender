@@ -15,3 +15,10 @@ class AnimationExportSettings(bpy.types.PropertyGroup):
                     "first to last keyframe times will be exported",
         default=False,
     )
+
+    auto_repack_to_mod: bpy.props.BoolProperty(
+        name="Auto-Repack to Mod Folder",
+        description="After exporting a character animation, copy the full repacked ANIBND into the Mod Folder's chr\\ "
+                    "directory (set in Soulstruct Settings) for ModEngine and DS Anim Studio",
+        default=True,
+    )

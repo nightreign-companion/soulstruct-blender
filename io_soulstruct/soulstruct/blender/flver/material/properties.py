@@ -143,6 +143,17 @@ class FLVERMaterialProps(SoulstructPropertyGroup):
             "gx_item_index",
             "sampler_prefix",
         ),
+        NIGHTREIGN: (
+            "flags",
+            "mat_def_path",
+            "f2_unk_x18",
+            "is_dynamic",
+            "default_bone_index",
+            "face_set_count",
+            "gx_items",
+            "gx_item_index",
+            "sampler_prefix",
+        ),
     }
 
     flags: bpy.props.IntProperty(
@@ -238,6 +249,14 @@ class FLVERMaterialSettings(SoulstructPropertyGroup):
             "pack_image_data",
         ),
         ELDEN_RING: (
+            "eldenring_str_matbinbnd_path",
+            "eldenring_str_image_cache_directory",
+            "image_cache_format",
+            "import_cached_images",
+            "cache_new_game_images",
+            "pack_image_data",
+        ),
+        NIGHTREIGN: (
             "eldenring_str_matbinbnd_path",
             "eldenring_str_image_cache_directory",
             "image_cache_format",
@@ -380,12 +399,19 @@ class FLVERMaterialSettings(SoulstructPropertyGroup):
         return Path(path_str) if path_str else None
 
     @staticmethod
+    def _mat_resource_submodule_name(game) -> str:
+        """Nightreign shares Elden Ring MATBIN / image-cache scene properties."""
+        if game in (ELDEN_RING, NIGHTREIGN):
+            return "eldenring"
+        return game.submodule_name
+
+    @staticmethod
     def get_game_matbinbnd_path_prop_name(context: bpy.types.Context) -> str:
         """Get property name for MATBINBND path string. Returns empty string if active game does not use MATBINs."""
         if not context.scene.soulstruct_settings.game_config.uses_matbin:
             return ""
         game = context.scene.soulstruct_settings.game
-        return f"{game.submodule_name}_str_matbinbnd_path"
+        return f"{FLVERMaterialSettings._mat_resource_submodule_name(game)}_str_matbinbnd_path"
 
     def get_game_matbinbnd_path(self, context: bpy.types.Context) -> Path | None:
         prop_name = self.get_game_matbinbnd_path_prop_name(context)
@@ -401,7 +427,7 @@ class FLVERMaterialSettings(SoulstructPropertyGroup):
     def get_game_image_cache_path_prop_name(context: bpy.types.Context) -> str:
         """Get property name for active game's image cache directory."""
         game = context.scene.soulstruct_settings.game
-        return f"{game.submodule_name}_str_image_cache_directory"
+        return f"{FLVERMaterialSettings._mat_resource_submodule_name(game)}_str_image_cache_directory"
 
     def get_game_image_cache_directory(self, context: bpy.types.Context) -> Path | None:
         prop_name = self.get_game_image_cache_path_prop_name(context)

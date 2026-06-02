@@ -345,3 +345,56 @@ Content Tools to recompress). So HavokMax is a **reference for reading**, which
 `soulstruct-havok` already does. For game-ready **writeback**, `soulstruct-havok`'s
 `CompressAnim.exe` bridge is actually further along than HavokMax. Conclusion: don't port
 HavokMax — finish the export plumbing above.
+
+## 8. Character search + mod-folder export (animator workflow)
+
+Quick path for a friend who only edits animations (no manual `chr\` file browsing).
+
+### Stan's Tools tab (recommended entry point)
+
+In the **3D Viewport** sidebar (press **N**), open the **"Stan's Tools"** tab (not FLVER/Animation). Panels:
+
+| Panel | What it does |
+|-------|----------------|
+| **Setup** | Game, **Auto-Detect Game Directory**, Game/Project/Mod folders, auto-repack toggle |
+| **Characters** | **Search Character by Name**, **NPC Param Selection** (mesh visibility), **Load Character Animation** |
+| **Animation** | Export settings + **Export Character Animation** |
+
+Reload the addon after updating the fork (`Edit → Preferences → Add-ons → Soulstruct → refresh` or restart Blender).
+
+### Settings (once per game)
+
+1. **Stan's Tools → Setup** (or **Properties → Scene → Soulstruct Settings**):
+   - **Game** = **Elden Ring: Nightreign** (dedicated entry; no need to fake Elden Ring).
+   - **Game Root** = `...\ELDEN RING NIGHTREIGN\Game` (use **Auto-Detect**).
+   - **Game Root** — unpacked `Game` folder (contains `chr\`, `msg\`, exe).
+   - **Project Root** (optional) — mod workspace mirroring game layout (e.g. `...\Game\mod`).
+   - **Mod Folder** — ModEngine folder (e.g. `...\ELDEN RING NIGHTREIGN\Game\mod`). Repacked ANIBNDs are copied to `chr\` here when auto-repack is on.
+2. **Animation → Export → Animation Export Settings**:
+   - **Auto-Repack to Mod Folder** (default on) — after **Export Character Anim**, copies the full `cXXXX.anibnd.dcx` into the Mod Folder for DSAS / in-game.
+
+### Load a character
+
+1. **Stan's Tools → Characters** → **Search Character by Name** (magnifier icon).
+2. Type a name (e.g. `Artorias`, `Margit`) or id (`c7720`), then pick an entry — imports the **CHRBND** model only.
+3. **NPC Param Selection** — pick an **NpcParam** row (same idea as DSAS Entity tab). Meshes using materials named `#00#`–`#31#` are shown/hidden from that row's draw masks. Requires **NpcParam.param.xml** (Witchy dump): set path in **Setup**, or put `regulation-bin/NpcParam.param.xml` under **Project Root** (e.g. from `souls-script-kt/param-nightreign/regulation-bin/`).
+4. Select the character **armature**, then **Load Character Animation** — search popup lists clips from that character's **ANIBND** (`a000_003023`, etc.).
+
+Names come from bundled JSON under `soulstruct/blender/general/character_names/` (generated from Paramdex; NR names merged when using Elden Ring). Edit **`overrides.json`** in that folder to add or fix labels (e.g. DLC bosses missing from Paramdex):
+
+```json
+{ "7720": "Knight Artorias" }
+```
+
+Regenerate defaults from the repo:
+
+```bash
+python scripts/tools/gen-character-names.py
+# (from souls-script-kt; writes into soulstruct-blender .../character_names/)
+```
+
+### Export to mod
+
+1. Select the character armature, set the **Action** you edited.
+2. **Animation → Export Character Anim** (writes project/game per existing rules).
+3. With **Auto-Repack to Mod Folder** enabled, the repacked `chr\cXXXX.anibnd.dcx` is also copied to the **Mod Folder** — same path DSAS reads when ModEngine is configured.

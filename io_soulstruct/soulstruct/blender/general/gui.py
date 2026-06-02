@@ -36,6 +36,8 @@ class _BaseGlobalSettingsPanel(SoulstructPanel):
             layout.prop(settings, settings.get_game_root_prop_name(), text="")
             layout.label(text="Project Root:")
             layout.prop(settings, settings.get_project_root_prop_name(), text="")
+            layout.label(text="Mod Folder:")
+            layout.prop(settings, settings.get_mod_root_prop_name(), text="")
         else:
             layout.label(text="Unsupported Game")
 

@@ -148,7 +148,7 @@ class _SelectMapDirectory(LoggingOperator):
         map_dir = root.get_dir_path("map", if_exist=True)  # type: Path | None
         if not map_dir:
             return self.error(f"{self.SOURCE} 'map' directory not found.")
-        if settings.is_game(ELDEN_RING):
+        if settings.is_er_family():
             self.set_map_options_eldenring(map_dir, settings.er_map_filter_mode)
         else:
 

@@ -32,7 +32,7 @@ class AnimationImportExportPanel(SoulstructPanel):
             if settings.import_roots != (None, None):
                 panel.label(text="Import from Game/Project")
                 panel.operator(ImportCharacterHKXAnimation.bl_idname)
-                if settings.is_game("ELDEN_RING"):
+                if settings.is_er_family():
                     panel.operator(ImportAssetHKXAnimation.bl_idname)
                 else:
                     panel.operator(ImportObjectHKXAnimation.bl_idname)
@@ -44,9 +44,18 @@ class AnimationImportExportPanel(SoulstructPanel):
         header, panel = self.layout.panel("Export", default_closed=False)
         header.label(text="Export")
         if panel:
+            export_settings = context.scene.animation_export_settings
+            header2, settings_panel = panel.panel("Animation Export Settings", default_closed=True)
+            header2.label(text="Animation Export Settings")
+            if settings_panel:
+                settings_panel.prop(export_settings, "selected_frames_only")
+                settings_panel.prop(export_settings, "auto_repack_to_mod")
+                if settings.game:
+                    settings_panel.label(text="Mod Folder:")
+                    settings_panel.prop(settings, settings.get_mod_root_prop_name(), text="")
             panel.label(text="Export to Project/Game")
             panel.operator(ExportCharacterHKXAnimation.bl_idname)
-            if settings.is_game("ELDEN_RING"):
+            if settings.is_er_family():
                 panel.label(text="Asset animation export not ready!")
             else:
                 panel.operator(ExportObjectHKXAnimation.bl_idname)

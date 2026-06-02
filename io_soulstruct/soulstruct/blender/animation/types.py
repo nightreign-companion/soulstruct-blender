@@ -16,7 +16,12 @@ from soulstruct.havok.fromsoft.darksouls1r.remobnd import *
 from soulstruct.havok.fromsoft.demonssouls import AnimationHKX as DES_AnimationHKX, SkeletonHKX as DES_SkeletonHKX
 from soulstruct.havok.utilities.maths import TRSTransform
 
-from soulstruct.blender.flver.utilities import get_basis_matrix, game_bone_transform_to_bl_bone_matrix
+from soulstruct.blender.flver.utilities import (
+    bl_bone_matrix_to_game_trs,
+    game_bone_transform_to_bl_bone_matrix,
+    get_armature_matrix,
+    get_basis_matrix,
+)
 from soulstruct.blender.exceptions import *
 from soulstruct.blender.types import *
 from soulstruct.blender.utilities import *
@@ -65,7 +70,15 @@ class SoulstructAnimation:
                 "N:\\GR\\data\\INTERROOT_win64\\chr\\{model_name}\\hkx_{div_id}compendium\\{animation_stem}.hkx"
             ),
             dcx_type=DCXType.Null,
-        )
+        ),
+        NIGHTREIGN: GameAnimationInfo(
+            relative_binder_path="chr/{model_name}.anibnd",
+            stem_template="###_######",
+            hkx_entry_path=(
+                "N:\\GR\\data\\INTERROOT_win64\\chr\\{model_name}\\hkx_{div_id}compendium\\{animation_stem}.hkx"
+            ),
+            dcx_type=DCXType.Null,
+        ),
     }
 
     GAME_ANIMATION_INFO_OBJ = {
@@ -687,8 +700,11 @@ class SoulstructAnimation:
         skeleton_hkx: BaseSkeletonHKX,
         animation_hkx_class: type[BaseAnimationHKX],
     ) -> ANIMATION_TYPING | BaseAnimationHKX:
-        """Animation data is easier to export from Blender than import, as we can just read the bone transforms on each
-        frame in Armature space directly (rather than needing to compute each basis Matrix when importing).
+        """Export bone animation by sampling `pose_bone.matrix_basis` on each frame (the inverse of import).
+
+        Import writes `matrix_basis` via `game_bone_transform_to_bl_bone_matrix()` + `get_basis_matrix()`. Export
+        reconstructs armature-space bone matrices with `get_armature_matrix()` and converts them back to game space
+        with `bl_bone_matrix_to_game_trs()`.
 
         We still need this action to determine the name and start/end times for the animation.
 
@@ -721,7 +737,7 @@ class SoulstructAnimation:
         }
 
         # Evaluate all curves at every frame, inclusive of `end_frame`.
-        for frame in range(start_frame, end_frame + 1):
+        for frame_idx, frame in enumerate(range(start_frame, end_frame + 1)):
             bpy.context.scene.frame_set(frame)
             armature_space_frame = []  # type: list[TRSTransform]
 
@@ -740,7 +756,7 @@ class SoulstructAnimation:
                     bl_bone = bl_bones_by_name[bone.name]
                 except KeyError:
                     # Ignore bone missing from FLVER Armature.
-                    if frame == start_frame:
+                    if frame_idx == 0:
                         # Only emit warning on first frame.
                         operator.warning(
                             f"Bone '{bone.name}' in HKX skeleton not found in Blender armature. Identity animation "
@@ -749,8 +765,9 @@ class SoulstructAnimation:
                     # raise AnimationExportError(f"Bone '{bone.name}' in HKX skeleton not found in Blender armature.")
                     armature_space_transform = TRSTransform.identity()
                 else:
-                    armature_space_transform = bl_matrix_to_game_trs(bl_bone.matrix)
-                    if frame > start_frame:
+                    bl_arma_matrix = get_armature_matrix(armature, bone.name, bl_bone.matrix_basis)
+                    armature_space_transform = bl_bone_matrix_to_game_trs(bl_arma_matrix)
+                    if frame_idx > 0:
                         # Negate rotation quaternion if dot with last rotation is negative (first frame ignored).
                         dot = np.dot(armature_space_transform.rotation.data, last_bone_trs[bone.name].rotation.data)
                         if dot < 0:

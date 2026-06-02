@@ -42,6 +42,7 @@ SUPPORTED_GAMES = [
     DARK_SOULS_DSR,
     BLOODBORNE,
     ELDEN_RING,
+    NIGHTREIGN,
 ]
 
 # Type variable for `get_initial_binder()` method.
@@ -160,6 +161,59 @@ class SoulstructSettings(bpy.types.PropertyGroup):  # NOT a `SoulstructPropertyG
         name="ER Project Directory",
         description="Project root directory with game-like structure to export to. Files for import and Binders needed "
                     "for exporting new entries will also be sourced here first if they exist",
+        default="",
+        subtype="DIR_PATH",
+    )
+
+    demonssouls_mod_root_str: bpy.props.StringProperty(
+        name="DeS Mod Folder",
+        description="ModEngine mod folder (e.g. game root/mod). Repacked ANIBNDs can be copied here for in-game/DSAS use",
+        default="",
+        subtype="DIR_PATH",
+    )
+    darksouls1ptde_mod_root_str: bpy.props.StringProperty(
+        name="DS1:PTDE Mod Folder",
+        description="ModEngine mod folder. Repacked ANIBNDs can be copied here for in-game/DSAS use",
+        default="",
+        subtype="DIR_PATH",
+    )
+    darksouls1r_mod_root_str: bpy.props.StringProperty(
+        name="DS1R Mod Folder",
+        description="ModEngine mod folder. Repacked ANIBNDs can be copied here for in-game/DSAS use",
+        default="",
+        subtype="DIR_PATH",
+    )
+    bloodborne_mod_root_str: bpy.props.StringProperty(
+        name="Bloodborne Mod Folder",
+        description="Mod folder for repacked animation binders",
+        default="",
+        subtype="DIR_PATH",
+    )
+    eldenring_mod_root_str: bpy.props.StringProperty(
+        name="ER Mod Folder",
+        description="ModEngine mod folder (e.g. ...\\ELDEN RING\\Game\\mod)",
+        default="",
+        subtype="DIR_PATH",
+    )
+
+    nightreign_game_root_str: bpy.props.StringProperty(
+        name="Nightreign Game Root",
+        description="Root (containing nightreign.exe) of Elden Ring: Nightreign game directory (unpacked with UXM)",
+        default="",
+        subtype="DIR_PATH",
+    )
+
+    nightreign_project_root_str: bpy.props.StringProperty(
+        name="Nightreign Project Directory",
+        description="Project root with game-like structure to export to (sourced first for imports)",
+        default="",
+        subtype="DIR_PATH",
+    )
+
+    nightreign_mod_root_str: bpy.props.StringProperty(
+        name="Nightreign Mod Folder",
+        description="ModEngine mod folder (e.g. ...\\ELDEN RING NIGHTREIGN\\Game\\mod). Repacked ANIBNDs copy to chr\\ "
+                    "when auto-repack is enabled",
         default="",
         subtype="DIR_PATH",
     )
@@ -362,6 +416,10 @@ class SoulstructSettings(bpy.types.PropertyGroup):  # NOT a `SoulstructPropertyG
         """Checks if current game is either version of Dark Souls 1."""
         return self.is_game(DARK_SOULS_PTDE, DARK_SOULS_DSR)
 
+    def is_er_family(self) -> bool:
+        """Elden Ring and Nightreign share FLVER/HKX/MATBIN pipeline."""
+        return self.is_game(ELDEN_RING, NIGHTREIGN)
+
     @property
     def game_config(self) -> BlenderGameConfig:
         return BLENDER_GAME_CONFIG[self.game]
@@ -373,6 +431,18 @@ class SoulstructSettings(bpy.types.PropertyGroup):  # NOT a `SoulstructPropertyG
     def get_project_root_prop_name(self):
         """Get the name of the project root property for the current game."""
         return f"{self.game.submodule_name}_project_root_str"
+
+    def get_mod_root_prop_name(self):
+        """Get the name of the mod folder property for the current game."""
+        return f"{self.game.submodule_name}_mod_root_str"
+
+    @property
+    def mod_root_path(self) -> Path | None:
+        if not self.game:
+            return None
+        prop_name = self.get_mod_root_prop_name()
+        mod_root_str = getattr(self, prop_name, "")
+        return Path(mod_root_str) if mod_root_str else None
 
     def auto_set_game(self):
         """Determine `game` enum value from `game_directory`."""
@@ -645,6 +715,43 @@ class SoulstructSettings(bpy.types.PropertyGroup):  # NOT a `SoulstructPropertyG
         )
         return []
 
+    def copy_exported_file_to_mod_root(
+        self,
+        operator: LoggingOperator,
+        exported_paths: list[Path],
+        relative_path: Path,
+    ) -> Path | None:
+        """Copy an exported file into the configured mod folder at `relative_path`."""
+        mod_root = self.mod_root_path
+        if not mod_root:
+            return None
+
+        if relative_path.is_absolute():
+            raise InternalSoulstructBlenderError(
+                f"Mod folder copy path must be relative to game root, not absolute: {relative_path}"
+            )
+
+        src: Path | None = None
+        target_name = relative_path.name
+        for path in exported_paths:
+            if path.name == target_name:
+                src = path
+                break
+        if src is None and exported_paths:
+            src = exported_paths[0]
+        if src is None or not src.is_file():
+            operator.warning(f"Cannot copy to mod folder: no exported file found for {relative_path}.")
+            return None
+
+        dst = mod_root / relative_path.parent / src.name
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if dst.is_file():
+            create_bak(dst)
+            operator.info(f"Created backup in mod folder: {dst}")
+        shutil.copy2(src, dst)
+        operator.info(f"Copied {src.name} to mod folder: {dst}")
+        return dst
+
     def export_file_data(
         self, operator: LoggingOperator, data: bytes, relative_path: Path, class_name: str
     ) -> list[Path]:
@@ -815,7 +922,7 @@ class SoulstructSettings(bpy.types.PropertyGroup):  # NOT a `SoulstructPropertyG
             binder_relative_path: Path of Binder to be modified, relative to game root directory.
             binder_class: Binder class to use for opening the Binder file. If `None`, defaults to base `Binder`.
         """
-        if binder_class is None and self.game is ELDEN_RING:
+        if binder_class is None and self.is_er_family():
             from soulstruct.eldenring.containers import DivBinder
 
             binder_class = DivBinder
