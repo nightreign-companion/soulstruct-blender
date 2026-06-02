@@ -104,18 +104,20 @@ class ExportAnyHKXAnimation(LoggingExportOperator):
         if not skeleton_path.is_file():
             return self.error(f"Invalid HKX skeleton path: {skeleton_path}")
 
-        if skeleton_path.name.endswith(".hkx") or skeleton_path.name.endswith(".hkx.dcx"):
-            skeleton_hkx = skeleton_hkx_class.from_path(skeleton_path)
-        else:
-            try:
-                skeleton_binder = Binder.from_path(skeleton_path)
-            except ValueError:
-                return self.error(f"Could not load file as a `SkeletonHKX` or `Binder`: {skeleton_path}")
-            try:
-                skeleton_entry = skeleton_binder[SKELETON_ENTRY_RE]
-            except EntryNotFoundError:
-                return self.error(f"Could not find `skeleton.hkx` (case-insensitive) in binder: '{skeleton_path}'")
-            skeleton_hkx = skeleton_hkx_class.from_binder_entry(skeleton_entry)
+        try:
+            skeleton_hkx = load_skeleton_hkx_from_path(skeleton_path, settings.game)
+        except EntryNotFoundError:
+            return self.error(f"Could not find `skeleton.hkx` in binder: '{skeleton_path}'")
+        except ValueError:
+            return self.error(f"Could not load file as a `SkeletonHKX` or `Binder`: {skeleton_path}")
+        except Exception as ex:
+            if "compendium" in str(ex).lower() or ex.__class__.__name__ == "MissingCompendiumError":
+                return self.error(
+                    f"Elden Ring skeleton HKX requires its ANIBND compendium. "
+                    f"Set HKX Skeleton Path to the character's `.anibnd.dcx` (e.g. chr\\c7720.anibnd.dcx), "
+                    f"not a loose skeleton file. Error: {ex}"
+                )
+            raise
 
         current_frame = context.scene.frame_current  # store for resetting after export
         try:

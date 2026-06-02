@@ -6,6 +6,7 @@ __all__ = [
     "read_animation_hkx_entry",
     "read_skeleton_hkx_entry",
     "load_anibnd_compendium",
+    "load_skeleton_hkx_from_path",
     "derive_er_hkx_div_id",
     "get_chr_animation_hkx_entry_path",
     "get_armature_frames",
@@ -14,6 +15,7 @@ __all__ = [
     "get_active_flver_or_part_armature",
 ]
 
+import re
 import typing as tp
 from pathlib import Path
 
@@ -80,29 +82,66 @@ def read_animation_hkx_entry(hkx_entry: BinderEntry, compendium: HKX = None) -> 
 
 def read_skeleton_hkx_entry(hkx_entry: BinderEntry, compendium: HKX = None) -> SKELETON_TYPING:
     """Read skeleton HKX file from a Binder entry and return the appropriate `SkeletonHKX` subclass instance."""
-    data = hkx_entry.get_uncompressed_data()
+    hkx = read_skeleton_hkx_entry_from_bytes(hkx_entry.get_uncompressed_data(), compendium=compendium)
+    hkx.path = Path(hkx_entry.name)
+    return hkx
+
+
+def load_skeleton_hkx_from_path(
+    skeleton_path: Path,
+    game: Game,
+) -> SKELETON_TYPING:
+    """Load a skeleton HKX from a loose file or a Binder (ANIBND) path."""
+    if skeleton_path.name.endswith((".hkx", ".hkx.dcx")):
+        return read_skeleton_hkx_entry_from_bytes(skeleton_path.read_bytes(), compendium=None)
+
+    if game is ELDEN_RING:
+        from soulstruct.eldenring.containers import DivBinder
+
+        binder = DivBinder.from_path(skeleton_path)
+    else:
+        binder = Binder.from_path(skeleton_path)
+
+    try:
+        skeleton_entry = binder[SKELETON_ENTRY_RE]
+    except EntryNotFoundError as ex:
+        raise EntryNotFoundError(
+            f"Could not find 'skeleton.hkx' in binder: '{skeleton_path}'"
+        ) from ex
+
+    compendium = load_anibnd_compendium(binder) if game is ELDEN_RING else None
+    return read_skeleton_hkx_entry(skeleton_entry, compendium)
+
+
+def read_skeleton_hkx_entry_from_bytes(
+    data: bytes,
+    compendium: HKX = None,
+) -> SKELETON_TYPING:
+    """Like `read_skeleton_hkx_entry` but from raw bytes (loose skeleton file)."""
     packfile_version = data[0x28:0x38]
     tagfile_version = data[0x10:0x18]
-    if packfile_version.startswith(b"Havok-4.5.0-r1"):  # DeS (c9900)
+    if packfile_version.startswith(b"Havok-4.5.0-r1"):
         hkx = demonssouls.SkeletonHKX.from_bytes(data, compendium=compendium)
-    elif packfile_version.startswith(b"Havok-5.5.0-r1"):  # DeS
+    elif packfile_version.startswith(b"Havok-5.5.0-r1"):
         hkx = demonssouls.SkeletonHKX.from_bytes(data, compendium=compendium)
-    elif packfile_version.startswith(b"hk_2010.2.0-r1"):  # PTDE
+    elif packfile_version.startswith(b"hk_2010.2.0-r1"):
         hkx = darksouls1ptde.SkeletonHKX.from_bytes(data, compendium=compendium)
-    elif tagfile_version == b"20150100":  # DSR
+    elif tagfile_version == b"20150100":
         hkx = darksouls1r.SkeletonHKX.from_bytes(data, compendium=compendium)
-    elif packfile_version.startswith(b"hk_2014.1.0-r1"):  # BB
+    elif packfile_version.startswith(b"hk_2014.1.0-r1"):
         hkx = bloodborne.SkeletonHKX.from_bytes(data, compendium=compendium)
-    elif tagfile_version == b"20180100":  # ER
+    elif tagfile_version == b"20180100":
         hkx = eldenring.SkeletonHKX.from_bytes(data, compendium=compendium)
     else:
         raise UnsupportedGameError(
-            f"Cannot support this HKX skeleton file version in Soulstruct and/or Blender.\n"
+            f"Cannot support this HKX skeleton file version.\n"
             f"   Possible packfile version: {packfile_version}\n"
             f"   Possible tagfile version: {tagfile_version}"
         )
-    hkx.path = Path(hkx_entry.name)
     return hkx
+
+
+SKELETON_ENTRY_RE = re.compile(r"skeleton\.hkx(\.dcx)?", flags=re.IGNORECASE)
 
 
 def load_anibnd_compendium(anibnd: Binder) -> HKX | None:
