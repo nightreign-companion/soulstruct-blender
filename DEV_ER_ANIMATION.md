@@ -117,10 +117,11 @@ def find_entries_matching_name(
     self, pattern: str | re.Pattern, flags=0, escape=False,
 ) -> list[BinderEntry]:
     return self.find_entries_by_name_regex(pattern, flags=flags, escape=escape)
-```
 
-Currently an **uncommitted working-tree change** in the submodule. Commit & push to your
-fork when ready:
+# Compatibility alias for io_soulstruct Blender operators (expects find_entry_id).
+def find_entry_id(self, entry_id: int) -> BinderEntry:
+    return self.find_entry_by_id(entry_id)
+```
 
 ```bash
 cd io_soulstruct_lib/soulstruct
