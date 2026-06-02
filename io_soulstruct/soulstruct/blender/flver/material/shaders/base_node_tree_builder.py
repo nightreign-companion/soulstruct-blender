@@ -26,6 +26,16 @@ from .utilities import new_shader_node
 
 NODE_INPUT_VALUE_TYPING = tp.Union[str, int, tuple[int, ...], float, tuple[float, ...]]
 
+# Legacy DS/BB aliases (`Main 0 Albedo`) and Elden Ring `SamplerGroupRole` aliases (`PRIMARY 0 Albedo`, `PRIMARY 0 Albedo_0`).
+_TEX_SAMPLER_ROLE_PATTERN = (
+    r"Main|Detail|PRIMARY|SECONDARY|DETAIL|FUR_ALPHA|OVERLAY|SUB_NORMALS|BLEND_CONTROL|EFFECT|MISC|UNGROUPED"
+)
+_TEX_SAMPLER_MAP_PATTERN = r"Albedo|Specular|Shininess|Normal|Metallic|Mask\d+|Vector"
+TEX_SAMPLER_ALIAS_RE = re.compile(
+    rf"(?P<role>{_TEX_SAMPLER_ROLE_PATTERN}) (?P<index>\d+) "
+    rf"(?P<map>{_TEX_SAMPLER_MAP_PATTERN})(?:_(?P<dup>\d+))?$"
+)
+
 @dataclass(slots=True)
 class BaseNodeTreeBuilder:
     """Wraps a Blender `NodeTree` and adds utility methods for creating/linking nodes for FLVER materials.
@@ -318,6 +328,21 @@ class BaseNodeTreeBuilder:
                 uv_layer_name="UVTexture0",
             )
 
+    @staticmethod
+    def _sampler_map_kind(sampler: MatDefSampler) -> str:
+        """Return canonical map type from a sampler alias (strips duplicate suffixes like `Albedo_0`)."""
+        tail = sampler.alias.rsplit(" ", 1)[-1]
+        return tail.split("_", 1)[0]
+
+    @staticmethod
+    def _find_two_layer_blend_keys(bsdf_keys: list[str]) -> tuple[str, str] | None:
+        """Find two BSDF layer keys to mix (legacy `Main` or Elden Ring `PRIMARY`)."""
+        for prefix in ("Main", "PRIMARY"):
+            layer_keys = sorted(key for key in bsdf_keys if key.startswith(f"{prefix} "))
+            if len(layer_keys) >= 2:
+                return layer_keys[0], layer_keys[1]
+        return None
+
     def _build_shader(self):
         """Fallback method for any shader that doesn't have a special case.
         
@@ -332,18 +357,17 @@ class BaseNodeTreeBuilder:
 
         # We create one BSDF node per 'texture group' (Albedo slot) and mix all groups afterward.
         bsdf_nodes = {}  # type: dict[str, bpy.types.Node]
-        tex_sampler_re = re.compile(r"(Main|Detail) (\d+) (Albedo|Specular|Shininess|Normal)")
 
         # Special case: if an Albedo map using 'UVFur' is found, we pass its alpha to ALL BSDFs.
         # TODO: Pretty sure I may want to do this for 'first group' in Elden Ring in general.
         fur_albedo_alpha = None  # type: NodeSocket | None
 
-        for match, sampler in self.matdef.get_matching_samplers(tex_sampler_re, match_alias=True):
+        for match, sampler in self.matdef.get_matching_samplers(TEX_SAMPLER_ALIAS_RE, match_alias=True):
             tex_node = self.tex_image_nodes.get(sampler.alias, None)
             if tex_node and tex_node.image:
                 # We only create BSDF nodes for textures that are actually used.
-                bsdf_key = f"{match.group(1)} {match.group(2)}"
-                map_type = match.group(3)
+                bsdf_key = f"{match.group('role')} {match.group('index')}"
+                map_type = match.group("map")
                 try:
                     bsdf_node = bsdf_nodes[bsdf_key]
                 except KeyError:
@@ -380,9 +404,10 @@ class BaseNodeTreeBuilder:
         # Mix all BSDF nodes together. TODO: May be incomplete, and finished manually, while I figure it out.
         nodes_to_mix = list(bsdf_nodes.keys())
 
-        # First, we mix Main 0 and Main 1 (using Blend 01 or vertex alpha).
-        if "Main 0" in nodes_to_mix and "Main 1" in nodes_to_mix:
-            # Mix first two Main BSDF nodes using Blend01 or vertex color.
+        # First, mix the two primary layers (DS `Main` or ER `PRIMARY`).
+        blend_pair = self._find_two_layer_blend_keys(nodes_to_mix)
+        if blend_pair:
+            layer_a, layer_b = blend_pair
             mix_fac_input = 0.5
             if blend01_node:
                 mix_fac_input = blend01_node.outputs["Color"]
@@ -396,12 +421,12 @@ class BaseNodeTreeBuilder:
                 mix_fac_input = self.vertex_colors_nodes[0].outputs["Alpha"]
 
             current_last_shader = self._mix_shader_nodes(
-                bsdf_nodes["Main 0"].outputs[0],
-                bsdf_nodes["Main 1"].outputs[0],
+                bsdf_nodes[layer_a].outputs[0],
+                bsdf_nodes[layer_b].outputs[0],
                 mix_fac_input,
             )
-            nodes_to_mix.remove("Main 0")
-            nodes_to_mix.remove("Main 1")
+            nodes_to_mix.remove(layer_a)
+            nodes_to_mix.remove(layer_b)
             # All other nodes in `nodes_to_mix` will be mixed with this mix shader.
         else:
             # Just mix in BSDF order.
@@ -412,7 +437,7 @@ class BaseNodeTreeBuilder:
 
             # TODO: Currently just mixing any additional Main textures 0.5 with last mix.
             shader_node = bsdf_nodes[shader_node_name]
-            if shader_node_name.startswith("Main "):
+            if shader_node_name.startswith(("Main ", "PRIMARY ", "SECONDARY ")):
                 current_last_shader = self._mix_shader_nodes(
                     current_last_shader.outputs[0],
                     shader_node.outputs[0],
@@ -520,15 +545,16 @@ class BaseNodeTreeBuilder:
         else:
             color_output = tex_image_node.outputs["Color"]
 
-        if sampler.alias.endswith("Specular"):
-            # Split specular texture into specular/roughness channels.
+        map_kind = self._sampler_map_kind(sampler)
+        if map_kind in {"Specular", "Metallic"}:
+            # Split specular/metallic texture into specular/roughness channels.
             self._specular_tex_to_bsdf_principled_node(
                 y=tex_image_node.location[1] - 150,  # leave room for overlay node
                 specular_tex_color=color_output,
                 bsdf_node=bsdf_node,
-                is_metallic="Metallic" in sampler.name,  # different BSDF parameter used in later games
+                is_metallic=map_kind == "Metallic" or "Metallic" in sampler.name,
             )
-        elif sampler.alias.endswith("Albedo"):
+        elif map_kind == "Albedo":
             self.link(color_output, bsdf_node.inputs["Base Color"])
 
             if bsdf_alpha_input:
@@ -540,7 +566,7 @@ class BaseNodeTreeBuilder:
                 # NOTE: Currently assuming that all Elden Ring albedo textures support transparency.
                 self.link(tex_image_node.outputs["Alpha"], bsdf_node.inputs["Alpha"])
 
-        elif sampler.alias.endswith("Shininess"):
+        elif map_kind == "Shininess":
             self.link(color_output, bsdf_node.inputs["Sheen Weight"])
 
     def _mix_shader_nodes(

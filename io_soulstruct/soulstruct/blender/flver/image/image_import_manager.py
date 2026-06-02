@@ -190,6 +190,23 @@ class ImageImportManager:
             if tpf_entry_stem not in self._scanned_tpf_sources:
                 self._pending_tpf_sources.setdefault(tpf_entry_stem, tpf_entry)
 
+    def _resolve_texture_stem(self, texture_stem: str) -> str | None:
+        """Map a requested MATBIN/FLVER stem to a loaded TPF texture stem, with ER fallbacks."""
+        if texture_stem in self._tpf_textures:
+            return texture_stem
+
+        # ER MATBIN often lists *_n / *_m maps that are absent from TEXBND (only *_a shipped).
+        for missing_suffix, fallback_suffix in (("n", "a"), ("m", "a"), ("r", "a")):
+            if texture_stem.endswith(f"_{missing_suffix}"):
+                alt = f"{texture_stem[:-2]}_{fallback_suffix}"
+                if alt in self._tpf_textures:
+                    _LOGGER.info(
+                        f"Texture '{texture_stem}' not in TPF; using '{alt}' (game omits this map slot)."
+                    )
+                    return alt
+
+        return None
+
     def get_flver_texture(self, texture_stem: str, model_name: str = "") -> TPFTexture:
         """Find texture from its stem across all registered/loaded texture file sources.
 
@@ -199,6 +216,10 @@ class ImageImportManager:
         """
         model_name = model_name.lower()
         texture_stem = texture_stem.lower()
+
+        resolved = self._resolve_texture_stem(texture_stem)
+        if resolved is not None:
+            return self._tpf_textures[resolved]
 
         if texture_stem in self._tpf_textures:
             # Already found and loaded.
@@ -225,6 +246,10 @@ class ImageImportManager:
                 except KeyError:
                     # TODO: Not sure if this should ever be allowed to happen (conflicting texture prefixes??).
                     continue
+
+        resolved = self._resolve_texture_stem(texture_stem)
+        if resolved is not None:
+            return self._tpf_textures[resolved]
 
         if self._binder_paths:
             # Last resort: scan all pending Binders for new TPFs. We typically cannot tell which Binder has the texture.

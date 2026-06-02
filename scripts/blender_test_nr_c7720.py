@@ -167,7 +167,7 @@ def main() -> int:
     settings.eldenring_game_root_str = str(game_root)
 
     imp = bpy.context.scene.flver_import_settings
-    imp.import_textures = False
+    imp.import_textures = True
     imp.merge_mesh_vertices = True
     imp.omit_default_bone = False
     imp.add_name_suffix = False
