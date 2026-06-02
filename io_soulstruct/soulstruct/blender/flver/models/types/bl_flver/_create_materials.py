@@ -122,7 +122,7 @@ def create_materials(
     for mesh, mesh_textures in zip(flver.meshes, all_mesh_texture_stems, strict=True):
         material = mesh.material
         material_hash = hash(material)  # NOTE: if there are duplicate FLVER materials, this will combine them
-        vertex_color_count = len([f for f in mesh.vertices.dtype.names if "color" in f])
+        vertex_color_count = mesh.vertex_color_count
 
         if material_hash not in flver_material_hash_first_mat:
             # First time this FLVER material has been encountered. Create it in Blender now.

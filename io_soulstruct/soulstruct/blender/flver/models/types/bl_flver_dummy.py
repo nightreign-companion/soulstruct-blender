@@ -112,10 +112,10 @@ class BlenderFLVERDummy(BaseBlenderSoulstructObject[Dummy, FLVERDummyProps]):
         bl_dummy.obj.empty_display_size = 0.05
 
         bl_dummy.color_rgba = (
-            soulstruct_obj.color_rgba.r,
-            soulstruct_obj.color_rgba.g,
-            soulstruct_obj.color_rgba.b,
-            soulstruct_obj.color_rgba.a,
+            soulstruct_obj.color.r,
+            soulstruct_obj.color.g,
+            soulstruct_obj.color.b,
+            soulstruct_obj.color.a,
         )
         bl_dummy.follows_attach_bone = soulstruct_obj.follows_attach_bone
         bl_dummy.use_upward_vector = soulstruct_obj.use_upward_vector

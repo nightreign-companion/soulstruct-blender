@@ -307,7 +307,7 @@ def _create_bl_mesh(
     command.operator.debug(f"Merged FLVER meshes in {time.perf_counter() - p} s")
     if command.import_settings.merge_mesh_vertices:
         # Report vertex reduction.
-        total_vertices = sum(len(mesh.vertices) for mesh in command.flver.meshes)
+        total_vertices = sum(mesh.vertex_count for mesh in command.flver.meshes)
         total_merged_vertices = merged_mesh.vertex_data.shape[0]
         command.operator.debug(
             f"Merging reduced {total_vertices} vertices to {total_merged_vertices} "

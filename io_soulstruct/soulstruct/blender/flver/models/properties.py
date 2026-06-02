@@ -157,7 +157,8 @@ class FLVERProps(SoulstructPropertyGroup):
             (FLVERVersion.Bloodborne_DS3_B.name, "Bloodborne/DS3 (B)", "Standard Bloodborne/DS3 version (B)"),
             (FLVERVersion.Sekiro_TestChr.name, "Sekiro (Test)", "Sekiro test version"),
             (FLVERVersion.Sekiro_EldenRing.name, "Sekiro/Elden Ring", "Standard Sekiro/Elden Ring version"),
-            (FLVERVersion.ArmoredCore6.name, "Armored Core 6", "Standard Sekiro/Elden Ring version"),
+            (FLVERVersion.ArmoredCore6.name, "Armored Core 6", "Armored Core 6 FLVER version"),
+            (FLVERVersion.Nightreign.name, "Nightreign", "Elden Ring: Nightreign FLVER version"),
         ],
         default="DEFAULT",  # detected from active game
     )

@@ -84,7 +84,7 @@ class BaseFLVERImportOperator(LoggingImportOperator):
                     # TODO: Sekiro does NOT use MATBIN, so this test needs to change.
                     #  Unsure if there is a way to generically distinguish these FLVER files, though.
                     #  Also, does AC6+ use MATBINBND?
-                    if flver.version == FLVERVersion.Sekiro_EldenRing:
+                    if flver.version.uses_matbin():
                         use_matbinbnd = True
                     flvers.append((flver.path_minimal_stem, flver))
             else:  # e.g. loose Map Piece FLVER
