@@ -304,33 +304,37 @@ The remaining "make import bulletproof" items are small and live in this fork:
 - Exercise `tests/animations` `test_er()` against a real ER (not just NR) ANIBND.
 - Validate end-to-end in the GUI (playback preview, action assignment on armature).
 
-## 7. Export roadmap (the real "⚠️ partial" work)
+## 7. Export (character ANIBND)
 
-This is the only part that needs new code. In priority order:
+**Implemented in this fork:**
 
-1. **`div_id` plumbing (blocking, tiny).** The ER entry-path template needs `{div_id}`:
-   `io_soulstruct/soulstruct/blender/animation/types.py:64-65`
-   ```
-   "N:\\GR\\data\\INTERROOT_win64\\chr\\{model_name}\\hkx_{div_id}compendium\\{animation_stem}.hkx"
-   ```
-   but the export call omits it (`animation/export_operators.py:403-405`), so ER character
-   export raises `KeyError: 'div_id'`. Derive `div_id` from the binder/compendium stem
-   (e.g. `c7720_div00.compendium` → `div00_`) and pass it into `.format(...)`.
-2. **Use `DivBinder` on the export path** (import already does; export uses a plain
-   `Binder`), plus load skeleton/animation **with the compendium** for round-trip.
-3. **Spline re-compression.** `soulstruct-havok` already exports via an interleaved →
-   hk2010 → `CompressAnim.exe` → hk2010-spline → hk2018 bridge
-   (`fromsoft/eldenring/file_types.py`). Confirm the bundled `CompressAnim.exe` ships and
-   runs. (Pure-Python spline *encode* is incomplete — ThreeComp40 quats only — so keep the
-   exe bridge for now.)
-4. **Tagfile write correctness.** Vanilla ER anim HKX use `TCRF` (type ref into the
-   compendium); the tagfile packer currently writes a full inline `TYPE` section and has
-   no `TCRF`/`TCM0` writer. Add an ER tagfile round-trip test
-   (`soulstruct-havok/tests/test_tagfile.py` has a `# TODO: ER tagfile test.`) and decide
-   whether the game accepts inline-`TYPE` anim files or requires `TCRF`.
-5. **Asset (`aeg`) animation export.** Mirror `ImportAssetHKXAnimation` for GEOMBND →
-   nested ANIBND writeback (`export_operators.py:524` TODO; add an `aeg` entry to the
-   asset animation info table at `types.py:96`).
+- `div_id` derived from compendium stem (`c7720` → `hkx_compendium\\`, `cXXXX_div00` → `hkx_div00_compendium\\`).
+- `get_initial_binder()` uses `DivBinder` for Elden Ring.
+- Character export loads skeleton with **compendium** (same as import).
+- Overwriting an existing animation reuses its Binder **entry path**.
+
+**Still partial:**
+
+- **BLF-split ANIBND write.** Characters like `c7720` (no `.blf` files) can be written back;
+  binders that use BLF div splits will error until `DivBinder.write()` is implemented.
+- **Tagfile / TCRF** round-trip (whether re-exported spline HKX load in-game without compendium refs).
+- **Asset (`aeg`)** animation export (not implemented).
+
+### Test export (Artorias `c7720`)
+
+1. Finish your edit on action `c7720|a000_003023` (or whichever clip you modified).
+2. **General Settings:** Game Root set; **Project Root** recommended (e.g. `...\NIGHTREIGN\Game\mod` mirroring `chr\`).
+3. Enable **Also Export to Game** only if you intend to overwrite game files (back up first).
+4. **Smoke test (loose HKX):** **Animation → Export → Export Any HKX Animation**
+   - Skeleton path: `chr\c7720.anibnd.dcx` (binder) or leave default flow.
+   - Pick output `a000_003023.hkx` on disk; confirms `CompressAnim.exe` + sampling work.
+5. **ANIBND writeback:** select armature → **Export Character Anim**
+   - Replaces the entry with the same ID as the action stem (`a000_003023` → id `1000003023`).
+   - Writes to project (and copies to game if configured).
+6. If export fails on **CompressAnim**, check console; `soulstruct-havok` ships `havok/resources/CompressAnim.exe`.
+7. **Force Interleaved** (operator option): skip spline compression for debugging only (game may not load it).
+
+Spline export uses `CompressAnim.exe` in `soulstruct-havok` (interleaved → hk2010 → spline → hk2018).
 
 ### Why HavokMax matters (and where it doesn't)
 

@@ -5,6 +5,9 @@ __all__ = [
     "ANIMATION_TYPING",
     "read_animation_hkx_entry",
     "read_skeleton_hkx_entry",
+    "load_anibnd_compendium",
+    "derive_er_hkx_div_id",
+    "get_chr_animation_hkx_entry_path",
     "get_armature_frames",
     "get_root_motion",
     "get_animation_name",
@@ -22,7 +25,8 @@ from soulstruct.havok.core import HKX
 from soulstruct.havok.utilities.maths import TRSTransform
 from soulstruct.havok.fromsoft.base import BaseAnimationHKX, BaseSkeletonHKX
 from soulstruct.havok.fromsoft import demonssouls, darksouls1ptde, darksouls1r, bloodborne, eldenring
-from soulstruct.containers import BinderEntry
+from soulstruct.containers import Binder, BinderEntry, EntryNotFoundError
+from soulstruct.games import Game, ELDEN_RING
 
 from soulstruct.blender.exceptions import UnsupportedGameError, SoulstructTypeError
 from soulstruct.blender.flver.models.types import BlenderFLVER
@@ -99,6 +103,57 @@ def read_skeleton_hkx_entry(hkx_entry: BinderEntry, compendium: HKX = None) -> S
         )
     hkx.path = Path(hkx_entry.name)
     return hkx
+
+
+def load_anibnd_compendium(anibnd: Binder) -> HKX | None:
+    """Load compendium HKX from an ANIBND, if present."""
+    try:
+        compendium_entry = anibnd.find_entry_matching_name(r".*\.compendium")
+    except EntryNotFoundError:
+        return None
+    return HKX.from_binder_entry(compendium_entry)
+
+
+def derive_er_hkx_div_id(anibnd: Binder, model_name: str) -> str:
+    """Elden Ring HKX path div prefix from compendium entry stem, e.g. ``''`` or ``'div00_'``.
+
+    Matches paths like ``hkx_compendium\\`` vs ``hkx_div00_compendium\\``.
+    """
+    try:
+        compendium_entry = anibnd.find_entry_matching_name(r".*\.compendium")
+    except EntryNotFoundError:
+        return ""
+    stem = compendium_entry.stem
+    model_lower = model_name.lower()
+    if stem.lower() == model_lower:
+        return ""
+    prefix = f"{model_name}_"
+    if not stem.lower().startswith(prefix.lower()):
+        return ""
+    suffix = stem[len(model_name) + 1 :]
+    if suffix.lower().startswith("div"):
+        return suffix.lower() + "_"
+    return ""
+
+
+def get_chr_animation_hkx_entry_path(
+    game: Game,
+    game_anim_info,
+    anibnd: Binder,
+    model_name: str,
+    animation_stem: str,
+    animation_id: int,
+) -> str:
+    """Resolve Binder entry path for a character animation HKX (reuse existing entry path when overwriting)."""
+    if animation_id in anibnd.get_entry_ids():
+        return anibnd.find_entry_by_id(animation_id).path
+    div_id = derive_er_hkx_div_id(anibnd, model_name) if game is ELDEN_RING else ""
+    entry_path = game_anim_info.hkx_entry_path.format(
+        model_name=model_name,
+        animation_stem=animation_stem,
+        div_id=div_id,
+    )
+    return game_anim_info.dcx_type.process_path(entry_path)
 
 
 def get_root_motion(animation_hkx: BaseAnimationHKX, swap_yz=True) -> np.ndarray | None:

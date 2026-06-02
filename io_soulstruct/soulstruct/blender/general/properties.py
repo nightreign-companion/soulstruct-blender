@@ -815,6 +815,10 @@ class SoulstructSettings(bpy.types.PropertyGroup):  # NOT a `SoulstructPropertyG
             binder_relative_path: Path of Binder to be modified, relative to game root directory.
             binder_class: Binder class to use for opening the Binder file. If `None`, defaults to base `Binder`.
         """
+        if binder_class is None and self.game is ELDEN_RING:
+            from soulstruct.eldenring.containers import DivBinder
+
+            binder_class = DivBinder
         binder_class = binder_class or Binder
 
         if self.game_root_path is None and self.project_root_path is None:

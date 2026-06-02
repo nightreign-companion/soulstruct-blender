@@ -15,6 +15,7 @@ from pathlib import Path
 import bpy
 
 from soulstruct.containers import Binder, EntryNotFoundError
+from soulstruct.games import ELDEN_RING
 from soulstruct.dcx import DCXType
 from soulstruct.havok.fromsoft.base import BaseSkeletonHKX, BaseAnimationHKX
 
@@ -215,10 +216,12 @@ class ExportHKXAnimationIntoAnyBinder(LoggingImportOperator):
         if not self.overwrite_existing and self.animation_id in binder.get_entry_ids():
             return self.error(f"Animation ID {self.animation_id} already exists in Binder and overwrite is disabled")
 
-        skeleton_entry = binder.find_entry_matching_name(r"skeleton\.hkx", re.IGNORECASE)
-        if skeleton_entry is None:
+        try:
+            skeleton_entry = binder[SKELETON_ENTRY_RE]
+        except EntryNotFoundError:
             return self.error("Could not find 'skeleton.hkx' in binder.")
-        skeleton_hkx = skeleton_hkx_class.from_binder_entry(skeleton_entry)
+        compendium = load_anibnd_compendium(binder) if settings.game is ELDEN_RING else None
+        skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         animation_name = get_animation_name(self.animation_id, self.name_template[1:], prefix=self.name_template[0])
         self.info(f"Exporting animation '{animation_name}' into binder {binder_path.name}...")
@@ -325,7 +328,8 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
             skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
         except EntryNotFoundError:
             return self.error("Could not find 'skeleton.hkx' (case-insensitive) in ANIBND.")
-        skeleton_hkx = skeleton_hkx_class.from_binder_entry(skeleton_entry)
+        compendium = load_anibnd_compendium(anibnd) if settings.game is ELDEN_RING else None
+        skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         # Get animation stem from action name. We will re-format its ID in the selected game's known format (e.g. to
         # support cross-game conversion).
@@ -374,6 +378,12 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
                 f"Animation ID {animation_id} is too large for game {settings.game}. Max is {'9' * max_digits}."
             )
 
+        if getattr(anibnd, "write_blf_division", False):
+            return self.error(
+                f"ANIBND '{anibnd.path_name}' uses BLF div split binders; writing modified ANIBNDs is not supported yet. "
+                f"Use 'Export Any HKX Animation' to write a loose .hkx file instead."
+            )
+
         self.info(f"Exporting animation '{animation_name}' into ANIBND '{anibnd.path_name}'...")
 
         current_frame = context.scene.frame_current
@@ -394,8 +404,13 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
             context.scene.frame_set(current_frame)
 
         animation_hkx.dcx_type = game_anim_info.dcx_type
-        entry_path = animation_hkx.dcx_type.process_path(
-            game_anim_info.hkx_entry_path.format(model_name=model_name, animation_stem=animation_name)
+        entry_path = get_chr_animation_hkx_entry_path(
+            settings.game,
+            game_anim_info,
+            anibnd,
+            model_name,
+            animation_name,
+            animation_id,
         )
 
         # Update or create binder entry.
