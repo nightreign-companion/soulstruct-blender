@@ -133,6 +133,7 @@ class FLVERProps(SoulstructPropertyGroup):
         DARK_SOULS_DSR: FLVER2_PROP_NAMES,
         BLOODBORNE: FLVER2_PROP_NAMES,
         ELDEN_RING: FLVER2_PROP_NAMES,
+        NIGHTREIGN: FLVER2_PROP_NAMES,
     }
 
     big_endian: bpy.props.BoolProperty(

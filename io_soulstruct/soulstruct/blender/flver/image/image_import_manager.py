@@ -137,7 +137,7 @@ class ImageImportManager:
                     pass
                 elif settings.is_game(DARK_SOULS_3, SEKIRO):
                     self._register_chr_texbnd(source_dir, model_stem=model_stem, res="")  # no res
-                elif settings.is_game(ELDEN_RING):
+                elif settings.is_er_family():
                     res = "_h" if prefer_hi_res else "_l"
                     self._register_chr_texbnd(source_dir, model_stem=model_stem, res=res)
             else:

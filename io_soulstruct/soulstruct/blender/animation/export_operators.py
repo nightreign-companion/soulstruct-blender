@@ -289,7 +289,11 @@ class ExportHKXAnimationIntoAnyBinder(LoggingImportOperator):
             skeleton_entry = binder[SKELETON_ENTRY_RE]
         except EntryNotFoundError:
             return self.error("Could not find 'skeleton.hkx' in binder.")
-        compendium = load_anibnd_compendium(binder) if settings.is_er_family() else None
+        compendium = (
+            load_anibnd_compendium(binder, hkx_entry_path=skeleton_entry.path)
+            if settings.is_er_family()
+            else None
+        )
         skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         animation_name = get_animation_name(self.animation_id, self.name_template[1:], prefix=self.name_template[0])
@@ -397,7 +401,11 @@ class ExportCharacterHKXAnimation(BaseExportTypedHKXAnimation):
             skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
         except EntryNotFoundError:
             return self.error("Could not find 'skeleton.hkx' (case-insensitive) in ANIBND.")
-        compendium = load_anibnd_compendium(anibnd) if settings.is_er_family() else None
+        compendium = (
+            load_anibnd_compendium(anibnd, hkx_entry_path=skeleton_entry.path, model_name=model_name)
+            if settings.is_er_family()
+            else None
+        )
         skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         # Get animation stem from action name. We will re-format its ID in the selected game's known format (e.g. to

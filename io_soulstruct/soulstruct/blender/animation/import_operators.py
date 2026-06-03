@@ -58,16 +58,26 @@ class BaseImportHKXAnimation(LoggingOperator):
             f"Operator '{self.__class__.__name__}' does not implement `get_anibnd_skeleton_compendium`."
         )
 
-    def load_binder_compendium(self, binder: Binder) -> HKX | None:
-        """Try to find compendium HKX. Div Binders may have multiple, but they should be identical, so we use first."""
-        try:
-            compendium_entry = binder.find_entry_matching_name(r".*\.compendium")
-        except EntryNotFoundError:
+    def load_binder_compendium(
+        self,
+        binder: Binder,
+        *,
+        hkx_entry_path: str = "",
+        model_name: str = "",
+    ) -> HKX | None:
+        """Load compendium HKX (picks div-specific compendium for multi-div ER/NR ANIBNDs)."""
+        from soulstruct.blender.animation.utilities import load_anibnd_compendium
+
+        compendium = load_anibnd_compendium(
+            binder,
+            hkx_entry_path=hkx_entry_path,
+            model_name=model_name,
+        )
+        if compendium is None:
             self.info("Did not find any compendium HKX in Binder.")
-            return None
-        else:
-            self.info(f"Loading compendium HKX from entry: {compendium_entry.name}")
-            return HKX.from_binder_entry(compendium_entry)
+        elif hkx_entry_path:
+            self.info(f"Loading compendium HKX for path: {hkx_entry_path}")
+        return compendium
 
     @staticmethod
     def read_skeleton(skeleton_anibnd: Binder, compendium: HKX = None) -> SKELETON_TYPING:
@@ -195,8 +205,16 @@ class ImportAnyHKXAnimation(BaseImportHKXAnimation, LoggingImportOperator):
                 "Must import animation from an ANIBND containing a skeleton HKX file or an OBJBND with an ANIBND."
             )
 
-        compendium = self.load_binder_compendium(anibnd)
-        skeleton_hkx = self.read_skeleton(skeleton_anibnd, compendium)
+        try:
+            skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
+        except EntryNotFoundError:
+            return self.error(f"ANIBND '{skeleton_anibnd.path_name}' has no skeleton HKX file.")
+        compendium = self.load_binder_compendium(
+            anibnd,
+            hkx_entry_path=skeleton_entry.path,
+            model_name=model_name,
+        )
+        skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
 
         # Don't bother calling sub-operator if there are no HKX entries to offer.
         if not anibnd.find_entries_matching_name(r"a.*\.hkx(\.dcx)?"):
@@ -347,8 +365,16 @@ class ImportObjectHKXAnimation(BaseImportTypedHKXAnimation):
             raise AnimationImportError(f"OBJBND of object '{model_name}' has no nested ANIBND.")
         # Skeleton is inside same ANIBND.
         skeleton_anibnd = anibnd = DivBinder.from_binder_entry(anibnd_entry)
-        compendium = self.load_binder_compendium(anibnd)
-        skeleton_hkx = self.read_skeleton(skeleton_anibnd, compendium)
+        try:
+            skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
+        except EntryNotFoundError as ex:
+            raise AnimationImportError(f"ANIBND of object '{model_name}' has no skeleton HKX.") from ex
+        compendium = self.load_binder_compendium(
+            anibnd,
+            hkx_entry_path=skeleton_entry.path,
+            model_name=model_name,
+        )
+        skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
         return anibnd, skeleton_hkx, compendium
 
 
@@ -383,6 +409,14 @@ class ImportAssetHKXAnimation(BaseImportTypedHKXAnimation):
         except EntryNotFoundError:
             raise AnimationImportError(f"GEOMBND of object '{model_name}' has no ANIBND '{anibnd_name}'.")
         skeleton_anibnd = anibnd = Binder.from_binder_entry(anibnd_entry)
-        compendium = self.load_binder_compendium(anibnd)
-        skeleton_hkx = self.read_skeleton(skeleton_anibnd, compendium)
+        try:
+            skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
+        except EntryNotFoundError as ex:
+            raise AnimationImportError(f"GEOMBND of asset '{model_name}' has no skeleton HKX.") from ex
+        compendium = self.load_binder_compendium(
+            anibnd,
+            hkx_entry_path=skeleton_entry.path,
+            model_name=model_name,
+        )
+        skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
         return anibnd, skeleton_hkx, compendium

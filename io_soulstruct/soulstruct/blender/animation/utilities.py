@@ -114,7 +114,11 @@ def load_skeleton_hkx_from_path(
             f"Could not find 'skeleton.hkx' in binder: '{skeleton_path}'"
         ) from ex
 
-    compendium = load_anibnd_compendium(binder) if is_er_family_game(game) else None
+    compendium = (
+        load_anibnd_compendium(binder, hkx_entry_path=skeleton_entry.path)
+        if is_er_family_game(game)
+        else None
+    )
     return read_skeleton_hkx_entry(skeleton_entry, compendium)
 
 
@@ -147,26 +151,81 @@ def read_skeleton_hkx_entry_from_bytes(
 
 
 SKELETON_ENTRY_RE = re.compile(r"skeleton\.hkx(\.dcx)?", flags=re.IGNORECASE)
+_ER_HKX_DIV_RE = re.compile(r"hkx_(div\d+)", re.IGNORECASE)
 
 
-def load_anibnd_compendium(anibnd: Binder) -> HKX | None:
+def resolve_compendium_entry(
+    anibnd: Binder,
+    hkx_entry_path: str = "",
+    model_name: str = "",
+) -> BinderEntry | None:
+    """Pick the ``.compendium`` entry for an HKX path (ER/NR multi-div ANIBNDs like c4900)."""
+    entries = anibnd.find_entries_matching_name(r".*\.compendium")
+    if not entries:
+        return None
+    if len(entries) == 1:
+        return entries[0]
+
+    path_norm = hkx_entry_path.replace("\\", "/")
+    div_match = _ER_HKX_DIV_RE.search(path_norm)
+    if div_match:
+        div_tag = div_match.group(1).lower()
+        model_lower = model_name.lower()
+        matched = [
+            e
+            for e in entries
+            if div_tag in e.path.replace("\\", "/").lower()
+            or e.stem.lower() == f"{model_lower}_{div_tag}"
+            or e.stem.lower().endswith(f"_{div_tag}")
+        ]
+        if matched:
+            return matched[0]
+
+    # DivBinder may duplicate identical compendium blobs across virtual binders.
+    if len({e.data for e in entries}) == 1:
+        return entries[0]
+
+    for entry in entries:
+        if "div00" in entry.path.replace("\\", "/").lower():
+            return entry
+
+    raise ValueError(
+        "Multiple distinct compendium files in binder and could not infer from HKX path "
+        f"'{hkx_entry_path}':\n  {[e.path for e in entries]}"
+    )
+
+
+def load_anibnd_compendium(
+    anibnd: Binder,
+    *,
+    hkx_entry_path: str = "",
+    model_name: str = "",
+) -> HKX | None:
     """Load compendium HKX from an ANIBND, if present."""
-    try:
-        compendium_entry = anibnd.find_entry_matching_name(r".*\.compendium")
-    except EntryNotFoundError:
+    compendium_entry = resolve_compendium_entry(anibnd, hkx_entry_path, model_name)
+    if compendium_entry is None:
         return None
     return HKX.from_binder_entry(compendium_entry)
 
 
-def derive_er_hkx_div_id(anibnd: Binder, model_name: str) -> str:
-    """Elden Ring HKX path div prefix from compendium entry stem, e.g. ``''`` or ``'div00_'``.
+def derive_er_hkx_div_id(
+    anibnd: Binder,
+    model_name: str,
+    entry_path: str = "",
+) -> str:
+    """Elden Ring HKX path div prefix, e.g. ``''`` or ``'div00_'``."""
+    if entry_path:
+        div_match = _ER_HKX_DIV_RE.search(entry_path.replace("\\", "/"))
+        if div_match:
+            return div_match.group(1).lower() + "_"
 
-    Matches paths like ``hkx_compendium\\`` vs ``hkx_div00_compendium\\``.
-    """
     try:
-        compendium_entry = anibnd.find_entry_matching_name(r".*\.compendium")
-    except EntryNotFoundError:
+        compendium_entry = resolve_compendium_entry(anibnd, entry_path, model_name)
+    except ValueError:
         return ""
+    if compendium_entry is None:
+        return ""
+
     stem = compendium_entry.stem
     model_lower = model_name.lower()
     if stem.lower() == model_lower:
@@ -209,11 +268,15 @@ def load_character_anibnd_bundle(
             raise FileNotFoundError(f"Cannot find ANIBND for c0000 sub-ANIBND '{sub_c0000_binder}'.")
         anibnd = DivBinder.from_path(sub_path)
 
-    compendium = load_anibnd_compendium(anibnd)
     try:
         skeleton_entry = skeleton_anibnd[SKELETON_ENTRY_RE]
     except EntryNotFoundError as ex:
         raise AnimationImportError(f"ANIBND '{skeleton_anibnd.path_name}' has no skeleton HKX.") from ex
+    compendium = load_anibnd_compendium(
+        anibnd,
+        hkx_entry_path=skeleton_entry.path,
+        model_name=model_name,
+    )
     skeleton_hkx = read_skeleton_hkx_entry(skeleton_entry, compendium)
     return anibnd, skeleton_hkx, compendium
 
@@ -235,6 +298,10 @@ def import_character_hkx_animation_entry(
     import traceback
 
     from soulstruct.blender.animation.types import SoulstructAnimation
+
+    game = context.scene.soulstruct_settings.game
+    if is_er_family_game(game):
+        compendium = load_anibnd_compendium(binder, hkx_entry_path=entry.path, model_name=model_name)
 
     p = time.perf_counter()
     animation_hkx = read_animation_hkx_entry(entry, compendium)

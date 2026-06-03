@@ -255,8 +255,10 @@ class ImportCharacterFLVER(BaseFLVERImportOperator):
                 model_name = DS1_CHARACTER_MODELS.get(model_stem, "<Unknown>")
             elif settings.is_game("DEMONS_SOULS"):
                 model_name = DES_CHARACTER_MODELS.get(model_stem, "<Unknown>")
-            elif settings.is_game("ELDEN_RING"):
-                model_name = ER_CHARACTER_MODELS.get(model_stem, "<Unknown>")
+            elif settings.is_er_family():
+                from soulstruct.blender.general.character_names import get_character_name_map
+
+                model_name = get_character_name_map(settings).get(model_stem, ER_CHARACTER_MODELS.get(model_stem, "<Unknown>"))
 
         self.layout.label(text=f"Character: {model_name}")
         # Now draw standard properties for File Browser.
@@ -316,7 +318,7 @@ class ImportObjectFLVER(BaseFLVERImportOperator):
     @classmethod
     def poll(cls, context) -> bool:
         settings = cls.settings(context)
-        if settings.is_game("ELDEN_RING"):
+        if settings.is_er_family():
             return False  # has 'assets' instead
         return settings.has_import_dir_path("obj")
 
@@ -351,7 +353,7 @@ class ImportAssetFLVER(BaseFLVERImportOperator):
     @classmethod
     def poll(cls, context) -> bool:
         settings = cls.settings(context)
-        if settings.game_variable_name != "ELDEN_RING":
+        if not settings.is_er_family():
             return False  # only Elden Ring has 'assets'
         return settings.has_import_dir_path("asset/aeg")
 

@@ -324,7 +324,7 @@ class BlenderFLVERMaterial:
 
         # FLVER material texture path extension doesn't actually matter, but we try to be faithful.
         settings = operator.settings(context)
-        path_ext = ".tif" if settings.is_game("ELDEN_RING") else ".tga"  # TODO: also TIF in Sekiro?
+        path_ext = ".tif" if settings.is_er_family() else ".tga"  # TODO: also TIF in Sekiro?
 
         if matdef.matbin:
             # Any sampler that does NOT have a path given in MATBIN is allowed to be missing (lack of MATBIN path

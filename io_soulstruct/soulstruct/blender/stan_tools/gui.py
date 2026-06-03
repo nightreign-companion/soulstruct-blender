@@ -111,7 +111,7 @@ class StanCharactersPanel(_StanToolsPanel):
         row = box.row(align=True)
         row.operator(StanApplyNpcParamDrawMask.bl_idname, icon="HIDE_OFF")
         row.operator(StanShowAllCharacterMeshes.bl_idname, icon="RESTRICT_VIEW_OFF")
-        box.label(text="First apply splits mesh by material; #00#–#31# slots follow NpcParam")
+        box.label(text="NPC Param applies on selection; Apply re-runs if needed")
 
 
 class StanAnimationPanel(_StanToolsPanel):

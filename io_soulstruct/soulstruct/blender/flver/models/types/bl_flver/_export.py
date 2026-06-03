@@ -449,7 +449,7 @@ def _create_flver_meshes(
 
     for used_bone_index in used_bone_indices:
         command.flver.bones[used_bone_index].usage_flags &= ~1
-        if command.settings.is_game("ELDEN_RING"):  # TODO: Probably started in an earlier game.
+        if command.settings.is_er_family():  # TODO: Probably started in an earlier game.
             command.flver.bones[used_bone_index].usage_flags |= 8
 
     vertex_data["position"] = vertex_positions

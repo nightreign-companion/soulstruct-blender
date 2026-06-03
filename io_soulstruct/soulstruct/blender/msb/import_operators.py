@@ -237,7 +237,7 @@ class _BaseImportMSB(LoggingOperator):
         import_props = list(msb_import_settings.__annotations__)
         booleans = [prop for prop in import_props if prop.startswith("import_")]
         for prop_name in booleans:
-            if settings.is_game("ELDEN_RING") and prop_name == "import_object_models":
+            if settings.is_er_family() and prop_name == "import_object_models":
                 layout.prop(msb_import_settings, prop_name, text="Import Asset Models")
             else:
                 layout.prop(msb_import_settings, prop_name)

@@ -139,7 +139,7 @@ class StanSearchCharacterToImport(ImportCharacterFLVER):
         if result == {"FINISHED"}:
             stan = context.scene.stan_tools_settings
             stan.refresh_npc_param_list(context, self.character)
-            err = stan.apply_active_npc_param(context)
-            if err:
-                self.warning(f"{err} (mesh visibility may need Apply NPC Param Visibility)")
+            self.info(
+                f"Imported {self.character}. Pick an NPC Param row to show the correct mesh parts."
+            )
         return result

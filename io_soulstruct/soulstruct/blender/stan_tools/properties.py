@@ -18,22 +18,20 @@ def _npc_param_enum_items(self, context) -> list[tuple[str, str, str]]:
     return StanToolsSettings._npc_param_items
 
 
-def _on_npc_param_row_changed(self, context):
+def _on_npc_param_row_changed(self, context: bpy.types.Context) -> None:
+    """Apply draw mask when the user picks a row (skipped during import list refresh)."""
+    if StanToolsSettings._suppress_npc_param_update:
+        return
     if not self.npc_param_row_id or not self.character_model:
         return
-    armature = find_character_armature(context, self.character_model)
-    if armature is None:
-        return
-    for variant in get_npc_param_variants_for_model(context.scene.soulstruct_settings, self, self.character_model):
-        if str(variant.row_id) == self.npc_param_row_id:
-            apply_draw_mask_to_character(armature, variant.draw_mask, context)
-            break
+    self.apply_active_npc_param(context)
 
 
 class StanToolsSettings(SoulstructPropertyGroup):
     """Per-scene settings for Stan's Tools workflow."""
 
     _npc_param_items: list[tuple[str, str, str]] = [("", "<none>", "")]
+    _suppress_npc_param_update: bool = False
 
     npc_param_xml_path: bpy.props.StringProperty(
         name="NpcParam XML",
@@ -55,7 +53,6 @@ class StanToolsSettings(SoulstructPropertyGroup):
         name="NPC Param",
         description="NpcParam row controlling which #XX# masked mesh parts are visible (like DSAS)",
         items=_npc_param_enum_items,
-        update=_on_npc_param_row_changed,
     )
 
     def refresh_npc_param_list(self, context: bpy.types.Context, model_stem: str | None = None) -> bool:
@@ -88,8 +85,13 @@ class StanToolsSettings(SoulstructPropertyGroup):
         StanToolsSettings._npc_param_items = [
             (str(v.row_id), v.label, f"NpcParam row {v.row_id}") for v in variants
         ]
-        if self.npc_param_row_id not in {item[0] for item in StanToolsSettings._npc_param_items}:
-            self.npc_param_row_id = StanToolsSettings._npc_param_items[0][0]
+        valid_ids = {item[0] for item in StanToolsSettings._npc_param_items}
+        if self.npc_param_row_id not in valid_ids:
+            StanToolsSettings._suppress_npc_param_update = True
+            try:
+                self["npc_param_row_id"] = StanToolsSettings._npc_param_items[0][0]
+            finally:
+                StanToolsSettings._suppress_npc_param_update = False
         return True
 
     def apply_active_npc_param(self, context: bpy.types.Context) -> str | None:
