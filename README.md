@@ -60,9 +60,10 @@ way back to 3.7, but lack many features and are no longer updated.
 | Bloodborne        | ✔️    | ❌         | ❌       | ❌         | ❌   |
 | Dark Souls 3      | ✔️    | ❌         | ❌       | ❌         | ❌   |
 | Sekiro            | ✔️    | ❌         | ❌       | ⚠️        | ❌   |
-| Elden Ring        | ✔️    | ❌         | ⚠️      | ⚠️        | ❌   |
+| Elden Ring        | ✔️    | ❌         | ⚠️      | ✔️†       | ❌   |
+| Nightreign       | ✔️†   | ❌         | ❌       | ✔️†       | ❌   |
 
-**This fork only:** Elden Ring / Nightreign **animation import and export** (HK2018 ANIBND) and **Stan's Tools** (sidebar workflow) are not in upstream Grimrukh — see [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md) and [`DEV_ER_ANIMATION.md`](DEV_ER_ANIMATION.md).
+† **This fork only:** Elden Ring / Nightreign **animation import and export** (HK2018 ANIBND) and **Stan's Tools** (sidebar workflow) are not in upstream Grimrukh — see [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md) and [`DEV_ER_ANIMATION.md`](DEV_ER_ANIMATION.md).
 
 ### Other Features
 
