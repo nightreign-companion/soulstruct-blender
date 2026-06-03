@@ -1,0 +1,4 @@
+fix(havok): supply propertyBag when building hk2018 animation objects from scratch
+fix(havok): add propertyBag to hkaAnimationContainer in minimal export build
+fix(havok): import SOULSTRUCT_USER_DATA_PATH for ER spline export temps
+fix(havok): harden ER animation export and hk2018 container types

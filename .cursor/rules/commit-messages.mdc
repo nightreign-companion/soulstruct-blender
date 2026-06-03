@@ -1,0 +1,43 @@
+---
+description: Conventional commit message format for soulstruct-blender and its submodules
+alwaysApply: true
+---
+
+# Commit messages (soulstruct-blender)
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/). See `CONTRIBUTING.md`.
+
+## Required format
+
+```
+<type>(<scope>): <imperative summary ≤72 chars>
+
+Optional body: why and what changed, not a file dump.
+```
+
+## Types and scopes
+
+| type | use for |
+|------|---------|
+| `feat` | new user-facing behavior (Stan's Tools, import/export) |
+| `fix` | bug fixes |
+| `docs` | markdown only |
+| `test` | smoke tests, headless Blender scripts |
+| `chore` | submodules, deps, tooling |
+| `refactor` | behavior-preserving restructure |
+
+Common **scopes:** `stan-tools`, `animation`, `flver`, `shaders`, `submodules`, `blender`, `havok`, `binder`
+
+## Do not
+
+- Sentence-case summaries (`Fix animation export`)
+- Vague messages (`wip`, `updates`, `misc`)
+- Double apostrophes in summaries (`Stan''s` → `stan-tools` scope instead)
+
+## Submodule bumps
+
+```
+chore(submodules): bump soulstruct-havok for <one-line reason>
+```
+
+Parent repo only records the pointer; implementation detail belongs in the submodule commit.

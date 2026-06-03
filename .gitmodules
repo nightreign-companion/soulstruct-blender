@@ -1,6 +1,6 @@
 [submodule "io_soulstruct_lib/soulstruct"]
 	path = io_soulstruct_lib/soulstruct
-	url = git@github.com:dosier/soulstruct.git
+	url = git@github.com:nightreign-companion/soulstruct.git
 [submodule "io_soulstruct_lib/soulstruct-havok"]
 	path = io_soulstruct_lib/soulstruct-havok
-	url = https://github.com/Grimrukh/soulstruct-havok.git
+	url = https://github.com/nightreign-companion/soulstruct-havok.git

@@ -1,0 +1,14 @@
+chore(submodules): add soulstruct and soulstruct-havok under io_soulstruct_lib
+fix(flver): Nightreign import fixes and headless smoke test
+fix(shaders): ER texture wiring and ScaleColor TPF fallback
+test(blender): add headless Nightreign c7720 animation import smoke test
+chore(submodules): bump soulstruct for animation binder entry lookup
+fix(animation): use native 30 fps for HKX import and export
+fix(animation): Elden Ring character animation export to ANIBND
+fix(animation): load ER skeleton from ANIBND compendium in Export Any HKX
+chore(submodules): bump soulstruct-havok for hk2018 propertyBag export
+fix(animation): auto-fill character ANIBND on export
+chore(submodules): bump soulstruct-havok for ER export user-data path
+feat(stan-tools): add sidebar for NR character and animation workflow
+fix(stan-tools): NPC mesh visibility and multi-div animation import
+docs(stan-tools): add workflow guides and commit conventions

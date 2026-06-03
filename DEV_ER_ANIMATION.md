@@ -1,15 +1,18 @@
 # Soulstruct for Blender — Elden Ring / Nightreign Animation Dev Notes
 
-Working notes for the `dosier` fork setup. Covers (1) what actually works today, (2) the
-single-PyCharm-project layout with submodules, (3) hot-reload workflow, and (4) the
-quickest path to "full mesh + anim + skeleton" plus the export roadmap.
+Working notes for the `nightreign-companion` fork setup. Covers (1) what actually works today, (2) the
+single-PyCharm-project layout with submodules, (3) hot-reload workflow, (4) the
+quickest path to "full mesh + anim + skeleton", export roadmap, and (5) **Stan's Tools**
+animator workflow.
 
-> **TL;DR — the big correction.** The premise "soulstruct doesn't support Elden Ring
-> animations" is only true for **export**. ER **mesh + skeleton (FLVER)** and ER
-> **animation _import_** already work. Proven on real Nightreign data
-> (`chr/c7720.anibnd.dcx`): the stock library path loads a **137-bone skeleton** and
-> decodes a spline animation to **71 interleaved frames** using the Elden Ring `hk2018`
-> classes. No Havok re-implementation from HavokMax is needed to *load* animations.
+> **Animator workflow (full tool map, DSAS, NPC params, troubleshooting):**
+> [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md)
+
+> **TL;DR.** In this **nightreign-companion fork**, ER/NR **mesh + skeleton (FLVER)**, **animation
+> import**, and **character ANIBND export** (HK2018 + `CompressAnim.exe`) work — see
+> §7. Upstream Grimrukh still lists ER animation export as incomplete. Verified on NR
+> `chr/c7720.anibnd.dcx`: 137-bone skeleton, spline decode to 71 interleaved frames via
+> `hk2018` classes without HavokMax.
 
 ---
 
@@ -22,7 +25,7 @@ quickest path to "full mesh + anim + skeleton" plus the export roadmap.
 | Animation **import** (ANIBND → Blender action) | ✅ Works | `animation/import_operators.py` → `eldenring.AnimationHKX`/`SkeletonHKX` |
 | HK2018 tagfile (`20180100`) + `.compendium` read | ✅ Works | `soulstruct.havok` tagfile unpacker + `DivBinder` |
 | Spline-compressed → interleaved decode | ✅ Works | `soulstruct.havok` `spline_compression.py` |
-| Animation **export** (Blender → game ANIBND) | ⚠️ Incomplete | `animation/export_operators.py` (see §4) |
+| Animation **export** (Blender → game ANIBND) | ✅ Works | `animation/export_operators.py` (see §7) |
 | Asset (`aeg`) animation export | ❌ Missing | TODO in `export_operators.py` |
 
 Nightreign uses the **same HK2018 tagfile format** as Elden Ring, so the ER classes parse
@@ -41,8 +44,8 @@ S:\_modding\tools\soulstruct-blender\        ← open THIS in PyCharm
 ├── io_soulstruct\                            ← Blender add-on (UI/operators only)
 │   └── soulstruct\blender\                   ← the `soulstruct.blender` package
 ├── io_soulstruct_lib\
-│   ├── soulstruct\                           ← submodule: git@github.com:dosier/soulstruct.git (main, 2.4.0)
-│   └── soulstruct-havok\                      ← submodule: Grimrukh/soulstruct-havok (1.3.0)
+│   ├── soulstruct\                           ← submodule: git@github.com:nightreign-companion/soulstruct.git (main, 2.4.0)
+│   └── soulstruct-havok\                      ← submodule: nightreign-companion/soulstruct-havok (upstream Grimrukh, 1.3.0)
 ├── .gitmodules
 └── DEV_ER_ANIMATION.md                       ← this file
 ```
@@ -52,10 +55,10 @@ S:\_modding\tools\soulstruct-blender\        ← open THIS in PyCharm
 ```ini
 [submodule "io_soulstruct_lib/soulstruct"]
 	path = io_soulstruct_lib/soulstruct
-	url = git@github.com:dosier/soulstruct.git
+	url = git@github.com:nightreign-companion/soulstruct.git
 [submodule "io_soulstruct_lib/soulstruct-havok"]
 	path = io_soulstruct_lib/soulstruct-havok
-	url = https://github.com/Grimrukh/soulstruct-havok.git
+	url = https://github.com/nightreign-companion/soulstruct-havok.git
 ```
 
 Clone-from-scratch on another machine:
@@ -95,7 +98,7 @@ Console** first to watch for errors.
 
 ---
 
-## 3. The compat fix (lives in the `dosier/soulstruct` fork)
+## 3. The compat fix (lives in the `nightreign-companion/soulstruct` fork)
 
 `soulstruct-havok` 1.3.0 calls `binder.find_entries_matching_name(...)`
 (`soulstruct-havok/src/soulstruct/havok/core.py:189`, on the ER ANIBND `load_from_entries`
@@ -155,12 +158,14 @@ sample animation id: 20  (spline -> 71 interleaved frames)  OK
   `blender-stubs/split_bpy_types.py` (chunks the huge stub so PyCharm can index it; it
   also injects Soulstruct property types via `blender-stubs/soulstruct_extra_stubs.py`).
   `File > Invalidate Caches` afterward.
-- Submodules appear as normal subfolders; edits to `soulstruct` go to your `dosier` fork,
+- Submodules appear as normal subfolders; edits to `soulstruct` go to your `nightreign-companion` fork,
   edits to `soulstruct-havok` track upstream (fork it too if you need to push Havok fixes).
 
 ---
 
-## 5. Hot reload
+## 5. Hot reload (two different things)
+
+### A. Blender addon reload (development)
 
 This add-on is built for Blender's built-in reload and pre-reloads its own
 `soulstruct.blender.*` modules in `io_soulstruct/__init__.py` to avoid partial-import
@@ -176,6 +181,16 @@ This add-on is built for Blender's built-in reload and pre-reloads its own
 So for day-to-day work in `soulstruct.blender` operators you stay in Blender and hit
 Reload Scripts. When you change the Havok/core libs (which is where ER **export** work
 happens), restart Blender (or reload those modules manually).
+
+### B. DSAS in-game live reload (not in Blender)
+
+**DS Anim Studio** can ask a **running** Elden Ring / Nightreign process to reload a
+character's on-disk files (`LiveRefreshOnSave` or **File → Force Ingame Entity Reload
+Now**). That uses Win32 memory injection + per-game AOB signatures (`install\Res\IngameReload_ER.ini`), not file watching.
+
+**Stan's Tools does not implement this.** After Blender export, use **Auto-Repack to Mod
+Folder** so `Game\mod\chr\c####.anibnd.dcx` is current, then trigger reload from DSAS
+(EAC off, admin, entity spawned). See [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md) §6.
 
 ---
 
@@ -366,8 +381,7 @@ Reload the addon after updating the fork (`Edit → Preferences → Add-ons → 
 
 1. **Stan's Tools → Setup** (or **Properties → Scene → Soulstruct Settings**):
    - **Game** = **Elden Ring: Nightreign** (dedicated entry; no need to fake Elden Ring).
-   - **Game Root** = `...\ELDEN RING NIGHTREIGN\Game` (use **Auto-Detect**).
-   - **Game Root** — unpacked `Game` folder (contains `chr\`, `msg\`, exe).
+   - **Game Root** = unpacked `...\ELDEN RING NIGHTREIGN\Game` (contains `chr\`, `msg\`, exe; use **Auto-Detect**).
    - **Project Root** (optional) — mod workspace mirroring game layout (e.g. `...\Game\mod`).
    - **Mod Folder** — ModEngine folder (e.g. `...\ELDEN RING NIGHTREIGN\Game\mod`). Repacked ANIBNDs are copied to `chr\` here when auto-repack is on.
 2. **Animation → Export → Animation Export Settings**:
@@ -377,8 +391,8 @@ Reload the addon after updating the fork (`Edit → Preferences → Add-ons → 
 
 1. **Stan's Tools → Characters** → **Search Character by Name** (magnifier icon).
 2. Type a name (e.g. `Artorias`, `Margit`) or id (`c7720`), then pick an entry — imports the **CHRBND** model only.
-3. **NPC Param Selection** — pick an **NpcParam** row (same idea as DSAS Entity tab). Meshes using materials named `#00#`–`#31#` are shown/hidden from that row's draw masks. Requires **NpcParam.param.xml** (Witchy dump): set path in **Setup**, or put `regulation-bin/NpcParam.param.xml` under **Project Root** (e.g. from `souls-script-kt/param-nightreign/regulation-bin/`).
-4. Select the character **armature**, then **Load Character Animation** — search popup lists clips from that character's **ANIBND** (`a000_003023`, etc.).
+3. **NPC Param Selection** — pick an **NpcParam** row (DSAS Entity-tab style). **Changing the row applies visibility immediately.** Import does not auto-split meshes (avoids freeze on large characters like Helstor); split runs when you pick a row or click **Apply NPC Param Visibility**. Materials tagged `#00#`–`#31#` map to `modelDispMask` fields. Requires Witchy **NpcParam.param.xml** (Setup path or `Project/regulation-bin/`).
+4. Select the character **armature**, then **Load Character Animation** — search popup lists clips from that character's **ANIBND**. Multi-div binders (e.g. **Caligo `c4900`**) pick the correct `.compendium` per clip path.
 
 Names come from bundled JSON under `soulstruct/blender/general/character_names/` (generated from Paramdex; NR names merged when using Elden Ring). Edit **`overrides.json`** in that folder to add or fix labels (e.g. DLC bosses missing from Paramdex):
 

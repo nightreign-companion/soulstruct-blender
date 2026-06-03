@@ -1,0 +1,5 @@
+feat(binder): add find_*_matching_name aliases for soulstruct-havok compat
+feat(flver): add Nightreign FLVER support and Blender-facing APIs
+feat(binder): add find_entry_id alias for Blender entry selection
+feat(shaders): add Nightreign shader metaparam overlay for MatDef import
+feat(nightreign): add package and game detection helpers

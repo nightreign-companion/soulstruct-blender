@@ -2,6 +2,19 @@
 
 This Blender add-on enables you to import and export a large number of different FromSoftware file formats.
 
+### nightreign-companion fork (ER / Nightreign animation + Stan's Tools)
+
+This repository is a **development fork** with Elden Ring / Nightreign HK2018 animation import/export,
+**Stan's Tools** (sidebar workflow for character search, NPC mesh variants, mod-folder export), and
+`soulstruct` / `soulstruct-havok` submodules under `io_soulstruct_lib/`.
+
+| Doc | Contents |
+|-----|----------|
+| [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md) | Full animator pipeline: Blender ↔ DSAS ↔ ModEngine, tools used, troubleshooting |
+| [`DEV_ER_ANIMATION.md`](DEV_ER_ANIMATION.md) | Havok verification, junction install, export notes, submodule layout |
+
+Requires **Blender 4.1+** (5.1 tested). Enable add-on via junction to `io_soulstruct` + `io_soulstruct_lib` — see `DEV_ER_ANIMATION.md` §2.
+
 It's powered by [Soulstruct](https://github.com/Grimrukh/soulstruct), my giant Python library of FromSoftware formats, and Soulstruct Havok, an 
 experimental expansion library.
 
@@ -48,6 +61,8 @@ way back to 3.7, but lack many features and are no longer updated.
 | Dark Souls 3      | ✔️    | ❌         | ❌       | ❌         | ❌   |
 | Sekiro            | ✔️    | ❌         | ❌       | ⚠️        | ❌   |
 | Elden Ring        | ✔️    | ❌         | ⚠️      | ⚠️        | ❌   |
+
+**This fork only:** Elden Ring / Nightreign **animation import and export** (HK2018 ANIBND) and **Stan's Tools** (sidebar workflow) are not in upstream Grimrukh — see [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md) and [`DEV_ER_ANIMATION.md`](DEV_ER_ANIMATION.md).
 
 ### Other Features
 
