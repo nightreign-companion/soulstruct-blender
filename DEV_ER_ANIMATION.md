@@ -1,6 +1,6 @@
 # Soulstruct for Blender — Elden Ring / Nightreign Animation Dev Notes
 
-Working notes for the `nightreign-companion` fork setup. Covers (1) what actually works today, (2) the
+Working notes for the `team-cereus` fork setup. Covers (1) what actually works today, (2) the
 single-PyCharm-project layout with submodules, (3) hot-reload workflow, (4) the
 quickest path to "full mesh + anim + skeleton", export roadmap, and (5) **Stan's Tools**
 animator workflow.
@@ -8,7 +8,7 @@ animator workflow.
 > **Animator workflow (full tool map, DSAS, NPC params, troubleshooting):**
 > [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md)
 
-> **TL;DR.** In this **nightreign-companion fork**, ER/NR **mesh + skeleton (FLVER)**, **animation
+> **TL;DR.** In this **team-cereus fork**, ER/NR **mesh + skeleton (FLVER)**, **animation
 > import**, and **character ANIBND export** (HK2018 + `CompressAnim.exe`) work — see
 > §7. Upstream Grimrukh still lists ER animation export as incomplete. Verified on NR
 > `chr/c7720.anibnd.dcx`: 137-bone skeleton, spline decode to 71 interleaved frames via
@@ -44,8 +44,8 @@ S:\_modding\tools\soulstruct-blender\        ← open THIS in PyCharm
 ├── io_soulstruct\                            ← Blender add-on (UI/operators only)
 │   └── soulstruct\blender\                   ← the `soulstruct.blender` package
 ├── io_soulstruct_lib\
-│   ├── soulstruct\                           ← submodule: git@github.com:nightreign-companion/soulstruct.git (main, 2.4.0)
-│   └── soulstruct-havok\                      ← submodule: nightreign-companion/soulstruct-havok (upstream Grimrukh, 1.3.0)
+│   ├── soulstruct\                           ← submodule: git@github.com:team-cereus/soulstruct.git (main, 2.4.0)
+│   └── soulstruct-havok\                      ← submodule: team-cereus/soulstruct-havok (upstream Grimrukh, 1.3.0)
 ├── .gitmodules
 └── DEV_ER_ANIMATION.md                       ← this file
 ```
@@ -55,10 +55,10 @@ S:\_modding\tools\soulstruct-blender\        ← open THIS in PyCharm
 ```ini
 [submodule "io_soulstruct_lib/soulstruct"]
 	path = io_soulstruct_lib/soulstruct
-	url = git@github.com:nightreign-companion/soulstruct.git
+	url = git@github.com:team-cereus/soulstruct.git
 [submodule "io_soulstruct_lib/soulstruct-havok"]
 	path = io_soulstruct_lib/soulstruct-havok
-	url = https://github.com/nightreign-companion/soulstruct-havok.git
+	url = https://github.com/team-cereus/soulstruct-havok.git
 ```
 
 Clone-from-scratch on another machine:
@@ -98,7 +98,7 @@ Console** first to watch for errors.
 
 ---
 
-## 3. The compat fix (lives in the `nightreign-companion/soulstruct` fork)
+## 3. The compat fix (lives in the `team-cereus/soulstruct` fork)
 
 `soulstruct-havok` 1.3.0 calls `binder.find_entries_matching_name(...)`
 (`soulstruct-havok/src/soulstruct/havok/core.py:189`, on the ER ANIBND `load_from_entries`
@@ -158,7 +158,7 @@ sample animation id: 20  (spline -> 71 interleaved frames)  OK
   `blender-stubs/split_bpy_types.py` (chunks the huge stub so PyCharm can index it; it
   also injects Soulstruct property types via `blender-stubs/soulstruct_extra_stubs.py`).
   `File > Invalidate Caches` afterward.
-- Submodules appear as normal subfolders; edits to `soulstruct` go to your `nightreign-companion` fork,
+- Submodules appear as normal subfolders; edits to `soulstruct` go to your `team-cereus` fork,
   edits to `soulstruct-havok` track upstream (fork it too if you need to push Havok fixes).
 
 ---

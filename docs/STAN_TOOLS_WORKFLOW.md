@@ -1,6 +1,6 @@
 # Stan's Tools — Nightreign / ER Animator Workflow
 
-End-to-end notes for the **nightreign-companion `soulstruct-blender` fork**: what we built, which
+End-to-end notes for the **team-cereus `soulstruct-blender` fork**: what we built, which
 external tools plug in, and how this differs from the classic DSAS → Max → HCT pipeline.
 
 Companion docs:
@@ -46,7 +46,7 @@ flowchart LR
 |------|-------------------------|---------------|
 | **UXM** (or ME3 loose files) | Unpacked `Game/chr/*.chrbnd.dcx`, `*.anibnd.dcx` on disk | Game Root in Blender |
 | **WitchyBND** | Unpack/repack BND/DCX when not using Soulstruct writeback | [ividyon/WitchyBND](https://github.com/ividyon/WitchyBND) — not Yabber |
-| **Soulstruct for Blender** (nightreign-companion fork) | FLVER import, HK2018 animation import/export, ANIBND writeback | `S:\_modding\tools\soulstruct-blender` |
+| **Soulstruct for Blender** (team-cereus fork) | FLVER import, HK2018 animation import/export, ANIBND writeback | `S:\_modding\tools\soulstruct-blender` |
 | **Stan's Tools** (addon tab) | Search characters, NPC mesh variants, animation search, mod folder, game auto-detect | `io_soulstruct/.../stan_tools/` |
 | **souls-script-kt** | `NpcParam.param.xml`, character name JSON generation, `.nr.kts` param mods (separate from animation) | `param-nightreign/regulation-bin/` |
 | **Smithbox / Witchy** | Param **editing** if not using Kotlin scripts | Wiki: use Smithbox, not Yapped |
@@ -57,7 +57,7 @@ flowchart LR
 
 ---
 
-## 2. Fork capabilities (nightreign-companion `soulstruct-blender`)
+## 2. Fork capabilities (team-cereus `soulstruct-blender`)
 
 ### What works today (ER + Nightreign)
 
@@ -80,8 +80,8 @@ flowchart LR
 soulstruct-blender/
 ├── io_soulstruct/soulstruct/blender/     # Addon (UI, operators, stan_tools)
 ├── io_soulstruct_lib/
-│   ├── soulstruct/                       # nightreign-companion fork — Binder aliases, NR constants
-│   └── soulstruct-havok/                 # nightreign-companion/soulstruct-havok (upstream Grimrukh) — HK2018, CompressAnim
+│   ├── soulstruct/                       # team-cereus fork — Binder aliases, NR constants
+│   └── soulstruct-havok/                 # team-cereus/soulstruct-havok (upstream Grimrukh) — HK2018, CompressAnim
 ├── DEV_ER_ANIMATION.md
 └── docs/STAN_TOOLS_WORKFLOW.md           # this file
 ```
@@ -90,7 +90,7 @@ Blender install via **junctions** to `%APPDATA%\...\scripts\addons\io_soulstruct
 
 ### Binder compat fix (required for ER ANIBND)
 
-`soulstruct-havok` expects `find_entry_matching_name` / `find_entries_matching_name` on `Binder`. The nightreign-companion `soulstruct` fork adds aliases over `find_entry_by_name_regex`. Without this, animation import fails on compendium lookup.
+`soulstruct-havok` expects `find_entry_matching_name` / `find_entries_matching_name` on `Binder`. The team-cereus `soulstruct` fork adds aliases over `find_entry_by_name_regex`. Without this, animation import fails on compendium lookup.
 
 ---
 

@@ -2,7 +2,7 @@
 
 This Blender add-on enables you to import and export a large number of different FromSoftware file formats.
 
-### nightreign-companion fork (ER / Nightreign animation + Stan's Tools)
+### team-cereus fork (ER / Nightreign animation + Stan's Tools)
 
 This repository is a **development fork** with Elden Ring / Nightreign HK2018 animation import/export,
 **Stan's Tools** (sidebar workflow for character search, NPC mesh variants, mod-folder export), and
