@@ -15,7 +15,7 @@ import bpy
 from soulstruct.blender.general.character_names import get_character_name_map
 from soulstruct.blender.flver.models.operators.import_operators import ImportCharacterFLVER
 
-_CHR_BND_RE = re.compile(r"^(c\d{4})\.chrbnd(\.dcx)?(\.bak)?$", re.IGNORECASE)
+_CHR_BND_RE = re.compile(r"^(c\d+)\.chrbnd(\.dcx)?(\.bak)?$", re.IGNORECASE)
 
 
 def _iter_chr_directories(settings) -> list[Path]:

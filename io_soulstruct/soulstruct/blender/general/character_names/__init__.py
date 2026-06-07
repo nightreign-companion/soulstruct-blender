@@ -11,6 +11,17 @@ if TYPE_CHECKING:
 
 _DIR = Path(__file__).parent
 
+# Optional soulstruct constants fallback (JSON wins; fallback fills gaps).
+_FALLBACK_MODULES: dict[str, str] = {
+    "eldenring": "soulstruct.eldenring.constants",
+    "darksouls1ptde": "soulstruct.darksouls1ptde.constants",
+    "darksouls1r": "soulstruct.darksouls1r.constants",
+    "demonssouls": "soulstruct.demonssouls.constants",
+    "bloodborne": "soulstruct.bloodborne.constants",
+    "darksouls3": "soulstruct.darksouls3.constants",
+    "sekiro": "soulstruct.sekiro.constants",
+}
+
 
 @lru_cache(maxsize=None)
 def _load_json(path: Path) -> dict[int, str]:
@@ -26,24 +37,13 @@ def reload_character_names() -> None:
 
 
 def _load_character_models_fallback(submodule_name: str) -> dict[int, str]:
+    mod_path = _FALLBACK_MODULES.get(submodule_name)
+    if not mod_path:
+        return {}
     try:
-        if submodule_name == "eldenring":
-            from soulstruct.eldenring.constants import CHARACTER_MODELS
-
-            return dict(CHARACTER_MODELS)
-        if submodule_name == "darksouls1ptde":
-            from soulstruct.darksouls1ptde.constants import CHARACTER_MODELS
-
-            return dict(CHARACTER_MODELS)
-        if submodule_name == "darksouls1r":
-            from soulstruct.darksouls1r.constants import CHARACTER_MODELS
-
-            return dict(CHARACTER_MODELS)
-        if submodule_name == "demonssouls":
-            from soulstruct.demonssouls.constants import CHARACTER_MODELS
-
-            return dict(CHARACTER_MODELS)
-    except ImportError:
+        mod = __import__(mod_path, fromlist=["CHARACTER_MODELS"])
+        return dict(mod.CHARACTER_MODELS)
+    except (ImportError, AttributeError):
         pass
     return {}
 
@@ -62,7 +62,8 @@ def get_character_name_map(settings: SoulstructSettings) -> dict[int, str]:
         names.update(_load_json(_DIR / "nightreign.json"))
     names.update(_load_json(_DIR / "overrides.json"))
 
-    if not names:
-        names.update(_load_character_models_fallback(submodule))
+    fallback = _load_character_models_fallback(submodule)
+    for model_id, display in fallback.items():
+        names.setdefault(model_id, display)
 
     return names
