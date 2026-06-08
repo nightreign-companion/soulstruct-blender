@@ -4,6 +4,7 @@ __all__ = [
     "StanSetupPanel",
     "StanCharactersPanel",
     "StanAnimationPanel",
+    "StanViewportPanel",
     "AutoDetectGameDirectory",
     "StanSearchCharacterToImport",
     "StanSearchCharacterAnimation",
@@ -11,6 +12,8 @@ __all__ = [
     "StanRefreshNpcParamList",
     "StanApplyNpcParamDrawMask",
     "StanShowAllCharacterMeshes",
+    "StanApplySceneLighting",
+    "StanRemoveSceneLighting",
 ]
 
 from .gui import *

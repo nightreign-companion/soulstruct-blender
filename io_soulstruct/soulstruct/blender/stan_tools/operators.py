@@ -5,6 +5,8 @@ __all__ = [
     "StanRefreshNpcParamList",
     "StanApplyNpcParamDrawMask",
     "StanShowAllCharacterMeshes",
+    "StanApplySceneLighting",
+    "StanRemoveSceneLighting",
 ]
 
 from pathlib import Path
@@ -17,6 +19,7 @@ from soulstruct.blender.utilities import LoggingOperator
 from .steam_paths import detect_game_root
 from .mesh_mask_visibility import show_all_character_meshes
 from .npc_param import find_character_armature, _resolve_npc_param_xml_path
+from .scene_lighting import apply_scene_lighting, remove_scene_lighting
 
 
 class AutoDetectGameDirectory(LoggingOperator):
@@ -112,4 +115,33 @@ class StanShowAllCharacterMeshes(LoggingOperator):
             return self.warning(f"Armature not found for {stan.character_model}.")
         count = show_all_character_meshes(armature)
         self.info(f"Showing {count} mesh object(s).")
+        return {"FINISHED"}
+
+
+class StanApplySceneLighting(LoggingOperator):
+    """Add or update 3-point viewport lighting and world sky/HDRI."""
+
+    bl_idname = "stan_tools.apply_scene_lighting"
+    bl_label = "Apply Scene Lighting"
+    bl_description = (
+        "Create StanTools 3-point area lights and world environment for Material Preview / Rendered view"
+    )
+
+    def execute(self, context):
+        stan = context.scene.stan_tools_settings
+        _light_count, message = apply_scene_lighting(context, stan)
+        self.info(message)
+        return {"FINISHED"}
+
+
+class StanRemoveSceneLighting(LoggingOperator):
+    """Remove StanTools viewport lighting and reset world to a dark studio."""
+
+    bl_idname = "stan_tools.remove_scene_lighting"
+    bl_label = "Remove Scene Lighting"
+    bl_description = "Delete StanTools lights and restore a simple dark world background"
+
+    def execute(self, context):
+        remove_scene_lighting(context)
+        self.info("Scene lighting removed.")
         return {"FINISHED"}

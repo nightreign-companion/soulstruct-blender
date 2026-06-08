@@ -68,6 +68,7 @@ flowchart LR
 | Character ANIBND export + spline compression | ✅ | `CompressAnim.exe` in soulstruct-havok |
 | **Multi-div ANIBND** (e.g. `c4900` Caligo) | ✅ | Per-entry compendium pick (`hkx_div00` / `div01` / `div02`) |
 | **Stan's Tools** UI | ✅ | Sidebar tab **Stan's Tools** |
+| Viewport scene lighting | ✅ | **Viewport** panel — 3-point lights + procedural sky/optional HDRI |
 | Nightreign in Game enum | ✅ | Setup + auto-detect Steam path |
 | Auto-repack ANIBND to mod folder | ✅ | `animation_export_settings.auto_repack_to_mod` |
 | NPC Param mesh visibility (DSAS-like) | ✅ | Split by `#00#`–`#31#` materials + `NpcParam` draw masks |

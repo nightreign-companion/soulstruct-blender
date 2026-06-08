@@ -12,6 +12,7 @@ from soulstruct.blender.animation.utilities import get_active_flver_or_part_arma
 
 from .mesh_mask_visibility import apply_draw_mask_to_character, show_all_character_meshes
 from .npc_param import find_character_armature, get_npc_param_variants_for_model
+from .scene_lighting import is_scene_lighting_active
 
 
 def _npc_param_enum_items(self, context) -> list[tuple[str, str, str]]:
@@ -55,6 +56,58 @@ class StanToolsSettings(SoulstructPropertyGroup):
         items=_npc_param_enum_items,
     )
 
+    scene_lighting_sky_strength: bpy.props.FloatProperty(
+        name="Sky Strength",
+        description="World background strength for procedural sky or HDRI",
+        default=0.4,
+        min=0.0,
+        max=5.0,
+    )
+
+    scene_lighting_key_energy: bpy.props.FloatProperty(
+        name="Key Light",
+        description="Energy of the warm key area light",
+        default=800.0,
+        min=0.0,
+        max=10000.0,
+    )
+
+    scene_lighting_fill_energy: bpy.props.FloatProperty(
+        name="Fill Light",
+        description="Energy of the cool fill area light",
+        default=200.0,
+        min=0.0,
+        max=10000.0,
+    )
+
+    scene_lighting_rim_energy: bpy.props.FloatProperty(
+        name="Rim Light",
+        description="Energy of the rim area light behind the subject",
+        default=400.0,
+        min=0.0,
+        max=10000.0,
+    )
+
+    scene_lighting_hdri_path: bpy.props.StringProperty(
+        name="HDRI (optional)",
+        description="Optional environment map image; uses procedural sky when empty",
+        subtype="FILE_PATH",
+        default="",
+    )
+
+    def scene_lighting_is_active(self, context: bpy.types.Context) -> bool:
+        """True when StanTools viewport lighting collection is present."""
+        del context
+        return is_scene_lighting_active()
+
+    def _set_npc_param_row_id(self, row_id: str) -> None:
+        """Assign enum by identifier; avoids TypeError when items just changed."""
+        StanToolsSettings._suppress_npc_param_update = True
+        try:
+            self["npc_param_row_id"] = row_id
+        finally:
+            StanToolsSettings._suppress_npc_param_update = False
+
     def refresh_npc_param_list(self, context: bpy.types.Context, model_stem: str | None = None) -> bool:
         """Rebuild NPC Param enum for `model_stem` (or current character_model)."""
         if model_stem:
@@ -66,7 +119,7 @@ class StanToolsSettings(SoulstructPropertyGroup):
 
         if not self.character_model:
             StanToolsSettings._npc_param_items = [("", "<import a character>", "")]
-            self.npc_param_row_id = ""
+            self._set_npc_param_row_id("")
             return False
 
         settings = context.scene.soulstruct_settings
@@ -75,11 +128,11 @@ class StanToolsSettings(SoulstructPropertyGroup):
             StanToolsSettings._npc_param_items = [
                 (
                     "",
-                    "<no NpcParam — set NpcParam XML in Setup>",
-                    "Point to NpcParam.param.xml or add regulation-bin under Project Root",
+                    "<no NpcParam — optional for ER/NR mesh masks>",
+                    "DS1/DSR/DeS do not use NpcParam draw masks; ER/NR: point to NpcParam.param.xml",
                 )
             ]
-            self.npc_param_row_id = ""
+            self._set_npc_param_row_id("")
             return False
 
         StanToolsSettings._npc_param_items = [
@@ -87,11 +140,7 @@ class StanToolsSettings(SoulstructPropertyGroup):
         ]
         valid_ids = {item[0] for item in StanToolsSettings._npc_param_items}
         if self.npc_param_row_id not in valid_ids:
-            StanToolsSettings._suppress_npc_param_update = True
-            try:
-                self["npc_param_row_id"] = StanToolsSettings._npc_param_items[0][0]
-            finally:
-                StanToolsSettings._suppress_npc_param_update = False
+            self._set_npc_param_row_id(StanToolsSettings._npc_param_items[0][0])
         return True
 
     def apply_active_npc_param(self, context: bpy.types.Context) -> str | None:

@@ -4,6 +4,7 @@ __all__ = [
     "StanSetupPanel",
     "StanCharactersPanel",
     "StanAnimationPanel",
+    "StanViewportPanel",
 ]
 
 from pathlib import Path
@@ -22,8 +23,11 @@ from .operators import (
     StanRefreshNpcParamList,
     StanApplyNpcParamDrawMask,
     StanShowAllCharacterMeshes,
+    StanApplySceneLighting,
+    StanRemoveSceneLighting,
 )
 from .npc_param import _resolve_npc_param_xml_path
+from .scene_lighting import is_scene_lighting_active
 
 STAN_TOOLS_CATEGORY = "Stan's Tools"
 
@@ -143,3 +147,33 @@ class StanAnimationPanel(_StanToolsPanel):
             layout.label(text=f"Mod copy: {settings.mod_root_path / 'chr'}", icon="FILE_FOLDER")
         elif export_settings.auto_repack_to_mod:
             layout.label(text="Set Mod Folder in Setup to auto-copy ANIBND", icon="ERROR")
+
+
+class StanViewportPanel(_StanToolsPanel):
+    bl_label = "Viewport"
+    bl_idname = "VIEW_PT_stan_tools_viewport"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    def draw(self, context):
+        layout = self.layout
+        stan = context.scene.stan_tools_settings
+
+        layout.label(
+            text="3-point lights + world sky for Material Preview / Rendered",
+            icon="LIGHT_SUN",
+        )
+
+        layout.prop(stan, "scene_lighting_sky_strength")
+        layout.prop(stan, "scene_lighting_key_energy")
+        layout.prop(stan, "scene_lighting_fill_energy")
+        layout.prop(stan, "scene_lighting_rim_energy")
+        layout.prop(stan, "scene_lighting_hdri_path", text="HDRI")
+
+        row = layout.row(align=True)
+        row.operator(StanApplySceneLighting.bl_idname, icon="LIGHT_AREA")
+        row.operator(StanRemoveSceneLighting.bl_idname, icon="TRASH")
+
+        if is_scene_lighting_active():
+            layout.label(text="Scene lighting: ON", icon="CHECKMARK")
+        else:
+            layout.label(text="Scene lighting: OFF", icon="BLANK1")

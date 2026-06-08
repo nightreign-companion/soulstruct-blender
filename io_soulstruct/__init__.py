@@ -192,12 +192,15 @@ CLASSES = (
     StanSetupPanel,
     StanCharactersPanel,
     StanAnimationPanel,
+    StanViewportPanel,
     AutoDetectGameDirectory,
     StanSearchCharacterToImport,
     StanSearchCharacterAnimation,
     StanRefreshNpcParamList,
     StanApplyNpcParamDrawMask,
     StanShowAllCharacterMeshes,
+    StanApplySceneLighting,
+    StanRemoveSceneLighting,
     # endregion
 
     # region FLVER / Materials / Textures
