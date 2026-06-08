@@ -64,20 +64,20 @@ class NodeTreeBuilder(PTDENodeTreeBuilder):
         else:
             node_group_name = "DS1R Basic Colored Spec"
 
-        normal_socket = self._get_mixed_texture_normals(r"Main \d+ Normal", vc_alpha)
+        normal_socket = self._get_mixed_texture_normals(r"DSB \d+ Normal", vc_alpha)
         if self.get_mtd_param("g_DetailBump_BumpPower", default=0) > 0:
             normal_socket = self._get_combined_normal_and_detail_socket(normal_socket)
 
         self._build_primary_shader(
             node_group_name=node_group_name,
             node_inputs={
-                "Diffuse Map": self._get_mixed_texture_color(r"Main \d+ Albedo", vc_alpha),
+                "Diffuse Map": self._get_mixed_texture_color(r"DSB \d+ Diffuse", vc_alpha),
                 "Diffuse Map Alpha": self._get_mixed_texture_alpha(
-                    r"Main \d+ Albedo", vc_alpha, self.matdef.edge or self.matdef.alpha,
+                    r"DSB \d+ Diffuse", vc_alpha, self.matdef.edge or self.matdef.alpha,
                 ),
-                "Specular Map": self._get_mixed_texture_color(r"Main \d+ Specular", vc_alpha),
+                "Specular Map": self._get_mixed_texture_color(r"DSB \d+ Specular", vc_alpha),
                 # NEW in DS1R (not PTDE):
-                "Specular Map Alpha": self._get_mixed_texture_alpha(r"Main \d+ Specular", vc_alpha),
+                "Specular Map Alpha": self._get_mixed_texture_alpha(r"DSB \d+ Specular", vc_alpha),
                 "Normal": normal_socket,
                 "Light Map": self._get_mixed_texture_color(r"Lightmap", vc_alpha),
                 "Vertex Colors": self.vertex_colors_nodes[0].outputs["Color"],
@@ -99,13 +99,13 @@ class NodeTreeBuilder(PTDENodeTreeBuilder):
         This is the most complex shader by far in terms of weird inputs. The subsurface scattering and parallax
         occlusion are not accurately depicted (maybe in Blender 5 when parallax is a built-in node).
         """
-        height_image = self.tex_image_nodes.get("Main 0 Normal").image
+        height_image = self.tex_image_nodes.get("DSB 0 Normal").image
         uv_node = self.uv_nodes["UVTexture0"]
         node_inputs = {
-            "Diffuse Map" : self._get_mixed_texture_color(r"Main 0 Albedo"),
-            "Specular Map": self._get_mixed_texture_color(r"Main 0 Specular"),
-            "Normal": self._get_mixed_texture_normals(r"Main 2 Normal"),
-            "Snow Detail": self._get_mixed_texture_normals(r"Main 1 Normal"),
+            "Diffuse Map" : self._get_mixed_texture_color(r"DSB 0 Diffuse"),
+            "Specular Map": self._get_mixed_texture_color(r"DSB 0 Specular"),
+            "Normal": self._get_mixed_texture_normals(r"DSB 2 Normal"),
+            "Snow Detail": self._get_mixed_texture_normals(r"DSB 1 Normal"),
             "Light Map" : self._get_mixed_texture_color(r"Lightmap"),
         }
         input_default_values = {
@@ -140,7 +140,7 @@ class NodeTreeBuilder(PTDENodeTreeBuilder):
             input_default_values["Light Map Influence"] = 1.0
 
         if node_inputs["Snow Detail"]:
-            snow_detail_samp = self.tex_image_nodes["Main 1 Normal"]
+            snow_detail_samp = self.tex_image_nodes["DSB 1 Normal"]
             uv_scale_node = self._new_tex_scale_node(
                 Vector2([
                     self.get_mtd_param("g_SnowDetailBumpTileScale", default=1),

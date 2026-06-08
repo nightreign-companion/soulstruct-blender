@@ -17,7 +17,7 @@ from .enums import *
 
 NODE_T = tp.TypeVar("NODE_T", bound=bpy.types.Node)
 
-TEX_SAMPLER_RE = re.compile(r"(Main) (\d+) (Albedo|Specular|Shininess|Normal)")
+TEX_SAMPLER_RE = re.compile(r"(Main|DSB) (\d+) (Albedo|Diffuse|Specular|Shininess|Normal)")
 
 
 def new_shader_node(

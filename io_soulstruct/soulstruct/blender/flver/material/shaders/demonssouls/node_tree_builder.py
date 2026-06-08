@@ -62,12 +62,12 @@ class NodeTreeBuilder(BaseNodeTreeBuilder):
         self._build_primary_shader(
             node_group_name=node_group_name,
             node_inputs={
-                "Diffuse Map": self._get_mixed_texture_color(r"Main \d+ Albedo", vc_alpha),
+                "Diffuse Map": self._get_mixed_texture_color(r"DSB \d+ Diffuse", vc_alpha),
                 "Diffuse Map Alpha": self._get_mixed_texture_alpha(
-                    r"Main \d+ Albedo", vc_alpha
+                    r"DSB \d+ Diffuse", vc_alpha
                 ) if self.matdef.edge or self.matdef.alpha else None,
-                "Specular Map": self._get_mixed_texture_color(r"Main \d+ Specular", vc_alpha),
-                "Normal": self._get_mixed_texture_normals(r"Main \d+ Normal", vc_alpha),
+                "Specular Map": self._get_mixed_texture_color(r"DSB \d+ Specular", vc_alpha),
+                "Normal": self._get_mixed_texture_normals(r"DSB \d+ Normal", vc_alpha),
                 "Light Map": self._get_mixed_texture_color(r"Lightmap", vc_alpha),
                 "Vertex Colors": self.vertex_colors_nodes[0].outputs["Color"],
                 "Vertex Colors Alpha": vc_alpha if self._uses_vertex_color_alpha else None,
@@ -88,9 +88,9 @@ class NodeTreeBuilder(BaseNodeTreeBuilder):
         self._build_primary_shader(
             node_group_name="Generic Diffuse No Light",
             node_inputs={
-                "Diffuse Map": self._get_mixed_texture_color(r"Main \d+ Albedo", vc_alpha),
+                "Diffuse Map": self._get_mixed_texture_color(r"DSB \d+ Diffuse", vc_alpha),
                 "Diffuse Map Alpha": self._get_mixed_texture_alpha(
-                    r"Main \d+ Albedo", vc_alpha
+                    r"DSB \d+ Diffuse", vc_alpha
                 ) if self.matdef.edge or self.matdef.alpha else None,
                 "Vertex Colors": self.vertex_colors_nodes[0].outputs["Color"],
                 "Vertex Colors Alpha": vc_alpha if self._uses_vertex_color_alpha else None,

@@ -74,18 +74,18 @@ class NodeTreeBuilder(BaseNodeTreeBuilder):
         else:
             node_group_name = "PTDE Standard Dir3 Shader"
 
-        normal_socket = self._get_mixed_texture_normals(r"Main \d+ Normal", vc_alpha)
+        normal_socket = self._get_mixed_texture_normals(r"DSB \d+ Normal", vc_alpha)
         if self.get_mtd_param("g_DetailBump_BumpPower", default=0) > 0:
             normal_socket = self._get_combined_normal_and_detail_socket(normal_socket)
 
         self._build_primary_shader(
             node_group_name=node_group_name,
             node_inputs={
-                "Diffuse Map": self._get_mixed_texture_color(r"Main \d+ Albedo", vc_alpha),
+                "Diffuse Map": self._get_mixed_texture_color(r"DSB \d+ Diffuse", vc_alpha),
                 "Diffuse Map Alpha": self._get_mixed_texture_alpha(
-                    r"Main \d+ Albedo", vc_alpha, self.matdef.edge or self.matdef.alpha,
+                    r"DSB \d+ Diffuse", vc_alpha, self.matdef.edge or self.matdef.alpha,
                 ),
-                "Specular Map": self._get_mixed_texture_color(r"Main \d+ Specular", vc_alpha),
+                "Specular Map": self._get_mixed_texture_color(r"DSB \d+ Specular", vc_alpha),
                 "Normal": normal_socket,
                 "Light Map": self._get_mixed_texture_color(r"Lightmap", vc_alpha),
                 "Vertex Colors": self.vertex_colors_nodes[0].outputs["Color"],
@@ -108,9 +108,9 @@ class NodeTreeBuilder(BaseNodeTreeBuilder):
         self._build_primary_shader(
             node_group_name="Generic Diffuse No Light",
             node_inputs={
-                "Diffuse Map": self._get_mixed_texture_color(r"Main \d+ Albedo", vc_alpha),
+                "Diffuse Map": self._get_mixed_texture_color(r"DSB \d+ Diffuse", vc_alpha),
                 "Diffuse Map Alpha": self._get_mixed_texture_alpha(
-                    r"Main \d+ Albedo", vc_alpha, self.matdef.edge or self.matdef.alpha
+                    r"DSB \d+ Diffuse", vc_alpha, self.matdef.edge or self.matdef.alpha
                 ),
                 "Vertex Colors": self.vertex_colors_nodes[0].outputs["Color"],
                 "Vertex Colors Alpha": vc_alpha if self._uses_vertex_colors_alpha else None,
@@ -126,7 +126,7 @@ class NodeTreeBuilder(BaseNodeTreeBuilder):
 
         Uses the texture in the normal map sampler as a heightmap, sampled at 3 different tile scales.
         """
-        tile_image = self.tex_image_nodes.get("Main 0 Normal").image
+        tile_image = self.tex_image_nodes.get("DSB 0 Normal").image
         uv_node = self.uv_nodes["UVTexture0"]
         water_color = self.get_mtd_param("g_WaterColor", default=(1, 1, 1, 1))
         shader_inputs = {
@@ -171,8 +171,8 @@ class NodeTreeBuilder(BaseNodeTreeBuilder):
         self._build_primary_shader(
             node_group_name="PTDE Normal to Alpha",
             node_inputs={
-                "Diffuse Map": self._get_mixed_texture_color(r"Main \d+ Albedo", vc_alpha),
-                "Diffuse Map Alpha": self._get_mixed_texture_alpha(r"Main \d+ Albedo", vc_alpha),
+                "Diffuse Map": self._get_mixed_texture_color(r"DSB \d+ Diffuse", vc_alpha),
+                "Diffuse Map Alpha": self._get_mixed_texture_alpha(r"DSB \d+ Diffuse", vc_alpha),
                 "Vertex Colors": self.vertex_colors_nodes[0].outputs["Color"],
                 "Vertex Colors Alpha": vc_alpha,
             },

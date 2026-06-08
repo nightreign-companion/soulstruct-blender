@@ -26,11 +26,12 @@ from .utilities import new_shader_node
 
 NODE_INPUT_VALUE_TYPING = tp.Union[str, int, tuple[int, ...], float, tuple[float, ...]]
 
-# Legacy DS/BB aliases (`Main 0 Albedo`) and Elden Ring `SamplerGroupRole` aliases (`PRIMARY 0 Albedo`, `PRIMARY 0 Albedo_0`).
+# DS1/DSR/PTDE/DeS DSB aliases (`DSB 0 Diffuse`), legacy DS/BB (`Main 0 Albedo`), and Elden Ring
+# `SamplerGroupRole` aliases (`PRIMARY 0 Albedo`, `PRIMARY 0 Albedo_0`).
 _TEX_SAMPLER_ROLE_PATTERN = (
-    r"Main|Detail|PRIMARY|SECONDARY|DETAIL|FUR_ALPHA|OVERLAY|SUB_NORMALS|BLEND_CONTROL|EFFECT|MISC|UNGROUPED"
+    r"DSB|Main|Detail|PRIMARY|SECONDARY|DETAIL|FUR_ALPHA|OVERLAY|SUB_NORMALS|BLEND_CONTROL|EFFECT|MISC|UNGROUPED"
 )
-_TEX_SAMPLER_MAP_PATTERN = r"Albedo|Specular|Shininess|Normal|Metallic|Mask\d+|Vector"
+_TEX_SAMPLER_MAP_PATTERN = r"Diffuse|Albedo|Specular|Shininess|Normal|Metallic|Mask\d+|Vector"
 TEX_SAMPLER_ALIAS_RE = re.compile(
     rf"(?P<role>{_TEX_SAMPLER_ROLE_PATTERN}) (?P<index>\d+) "
     rf"(?P<map>{_TEX_SAMPLER_MAP_PATTERN})(?:_(?P<dup>\d+))?$"
@@ -151,7 +152,7 @@ class BaseNodeTreeBuilder:
 
             # We take this opportunity to change the Color Space of non-Albedo textures to 'Non-Color'.
             # NOTE: If the texture is used inconsistently across materials, this could change repeatedly.
-            if bl_image and "Albedo" not in node_label and "Lightmap" not in node_label:
+            if bl_image and "Albedo" not in node_label and "Diffuse" not in node_label and "Lightmap" not in node_label:
                 bl_image.colorspace_settings.name = "Non-Color"
             if uv_layer_name:
                 # Connect to appropriate UV node, creating it if necessary.
@@ -208,7 +209,7 @@ class BaseNodeTreeBuilder:
             inputs={"IOR": 1.333},
         )
 
-        normal_node = self.tex_image_nodes["Main 0 Normal"]
+        normal_node = self.tex_image_nodes["DSB 0 Normal"]
         try:
             uv_texture_0 = self.matdef.UVLayer["UVTexture0"].name
         except KeyError:
@@ -239,17 +240,17 @@ class BaseNodeTreeBuilder:
         """
         Sketch for DS1R snow shader:
          - Mix a standard Principled BSDF (main texture, e.g. ground) and a Diffuse BSDF shader for snow.
-         - Use 'Main 0 Albedo' and 'Main 0 Specular' as usual for Principled.
+         - Use 'DSB 0 Diffuse' and 'DSB 0 Specular' as usual for Principled.
              - Mix 'Lightmap' as overlay if present.
-         - Snow diffuse uses both 'Main 0 Normal' (which is sometimes a diffuse snow texture!) and 'Main 1 Normal' as
+         - Snow diffuse uses both 'DSB 0 Normal' (which is sometimes a diffuse snow texture!) and 'DSB 1 Normal' as
            its BSDF normal input (mapped with UVTexture0). We mix these two textures 50/50 if given.
-         - 'Main 2 Normal' is actually the normal map for the Principled BSDF, but only appears in DS1R! Not PTDE.
+         - 'DSB 2 Normal' is actually the normal map for the Principled BSDF, but only appears in DS1R! Not PTDE.
          - Mix shader nodes using vertex color alpha, raised with a Math node to the power of 4.0, which seems to
            capture the snow effect best in my tuning.
          - Create a Mix Shader for the standard textures and new Diffuse snow BSDF. Plug into material output.
         """
 
-        bsdf_node = self._new_principled_bsdf_node("Main 0 BSDF")
+        bsdf_node = self._new_principled_bsdf_node("DSB 0 BSDF")
         # noinspection PyTypeChecker
         diffuse_bsdf_node = new_shader_node(
             self.tree,
@@ -286,7 +287,7 @@ class BaseNodeTreeBuilder:
         lightmap_node = self.tex_image_nodes.get("Lightmap", None)
 
         # Connect standard textures to Principled BSDF.
-        main_sampler_re = re.compile(r".* (Albedo|Specular|Shininess|Normal)")
+        main_sampler_re = re.compile(r".* (Diffuse|Albedo|Specular|Shininess|Normal)")
         for _, sampler in self.matdef.get_matching_samplers(main_sampler_re, match_alias=True):
             if sampler.alias not in self.tex_image_nodes:
                 continue
@@ -303,14 +304,14 @@ class BaseNodeTreeBuilder:
             self.link(self.uv_nodes["UVTexture0"].outputs["Vector"], disp_node.inputs["Vector"])
             self.link(disp_node.outputs["Color"], self.output_displacement)
 
-        # Connect 'Main 0 Normal' (snow diffuse color) and 'Main 1 Normal' (snow diffuse normal) to diffuse node.
+        # Connect 'DSB 0 Normal' (snow diffuse color) and 'DSB 1 Normal' (snow diffuse normal) to diffuse node.
         # TODO: Snow albedo texture is used with 'g_Bumpmap' for this shader! We just use it as albedo here.
-        snow_albedo_node = self.tex_image_nodes["Main 0 Normal"]
+        snow_albedo_node = self.tex_image_nodes["DSB 0 Normal"]
         self.link(snow_albedo_node.outputs["Color"], diffuse_bsdf_node.inputs["Color"])
         # TODO: Snow MTD (in DS1R at least) incorrectly says to use UV index 1 for snow normal map, but that UV
         #  layer doesn't even exist on the meshes that use it. MTD for DS1R should already fix that, but we force
         #  'UVTexture0' here anyway to be safe, given the specificity of this code.
-        tex_image_node = self.tex_image_nodes["Main 1 Normal"]
+        tex_image_node = self.tex_image_nodes["DSB 1 Normal"]
         self._normal_tex_to_normal_input(
             y=tex_image_node.location[1],
             color_input_from=tex_image_node.outputs["Color"],
@@ -318,9 +319,9 @@ class BaseNodeTreeBuilder:
             uv_layer_name="UVTexture0",
         )
 
-        if "Main 2 Normal" in self.tex_image_nodes:
-            # Only known use of 'Main 2 Normal' in DS1R, and it's the normal map of the main texture (e.g. ground).
-            normal_tex_node = self.tex_image_nodes["Main 2 Normal"]
+        if "DSB 2 Normal" in self.tex_image_nodes:
+            # Only known use of 'DSB 2 Normal' in DS1R, and it's the normal map of the main texture (e.g. ground).
+            normal_tex_node = self.tex_image_nodes["DSB 2 Normal"]
             self._normal_tex_to_normal_input(
                 normal_tex_node.location[1],
                 normal_tex_node.outputs["Color"],
@@ -336,8 +337,8 @@ class BaseNodeTreeBuilder:
 
     @staticmethod
     def _find_two_layer_blend_keys(bsdf_keys: list[str]) -> tuple[str, str] | None:
-        """Find two BSDF layer keys to mix (legacy `Main` or Elden Ring `PRIMARY`)."""
-        for prefix in ("Main", "PRIMARY"):
+        """Find two BSDF layer keys to mix (DSB, legacy `Main`, or Elden Ring `PRIMARY`)."""
+        for prefix in ("DSB", "Main", "PRIMARY"):
             layer_keys = sorted(key for key in bsdf_keys if key.startswith(f"{prefix} "))
             if len(layer_keys) >= 2:
                 return layer_keys[0], layer_keys[1]
@@ -437,7 +438,7 @@ class BaseNodeTreeBuilder:
 
             # TODO: Currently just mixing any additional Main textures 0.5 with last mix.
             shader_node = bsdf_nodes[shader_node_name]
-            if shader_node_name.startswith(("Main ", "PRIMARY ", "SECONDARY ")):
+            if shader_node_name.startswith(("DSB ", "Main ", "PRIMARY ", "SECONDARY ")):
                 current_last_shader = self._mix_shader_nodes(
                     current_last_shader.outputs[0],
                     shader_node.outputs[0],
@@ -554,7 +555,7 @@ class BaseNodeTreeBuilder:
                 bsdf_node=bsdf_node,
                 is_metallic=map_kind == "Metallic" or "Metallic" in sampler.name,
             )
-        elif map_kind == "Albedo":
+        elif map_kind in {"Albedo", "Diffuse"}:
             self.link(color_output, bsdf_node.inputs["Base Color"])
 
             if bsdf_alpha_input:
