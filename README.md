@@ -84,33 +84,82 @@ eventually add import support so you can at least view the collision meshes in B
 
 # Installation
 
-This is an experimental add-on that is not yet published to Blender. To install the add-on manually, follow these steps:
+**Blender 4.1+** is required (Python 3.11+). This **team-cereus** fork ships `soulstruct` and `soulstruct-havok` as
+git submodules under `io_soulstruct_lib/`. You need **both** `io_soulstruct` and `io_soulstruct_lib` beside each other in
+Blender's add-ons folder.
 
-1. Ensure you have **Blender 4.1 or later**, as Python 3.11 is required.
-2. Download the add-on `.zip` file from the GitHub repository (Releases).
-3. Unzip the contents into your Blender's **user** `scripts/addons` directory.
-   - On Windows, the directory is typically at `C:/<User>/AppData/Roaming/Blender Foundation/Blender/<version>/scripts/addons/`.
-   - **Do not** unzip the contents into the Blender installation directory (e.g. in `Program Files`). The Soulstruct
-   module may not have write access there. If you see a `PermissionError` when trying to enable the add-on in Blender, 
-   check you haven't done this!
-4. Open Blender and go to `Edit > Preferences > Add-ons`.
-5. In the Add-ons tab, find `Import-Export: Soulstruct` and enable it by checking the box next to it.
-   - If you see an error, particularly one about `soulstruct` module import, double check that `io_soulstruct_lib` is
-   installed in the `scripts/addons` directory next to `io_soulstruct`.
-6. Press the N key in the 3D View window or click the little arrow in the top-right and you should see many new tabs
-   including `FLVER`, `Animation`, and so on.
+Blender user add-ons path (typical):
 
-If you would like to install or update the add-on directly from Git without an official GitHub release, clone and 
-update (or just download) the repo, and update the contents of `scripts/addons/io_soulstruct` from the main 
-`io_soulstruct` folder in the repo.
+```
+%APPDATA%\Blender Foundation\Blender\<version>\scripts\addons\
+```
 
-**Note that updated `io_soulstruct` versions without zip releases may also use newer versions of `soulstruct` and 
-`soulstruct-havok` that need to be installed into `scripts/addons/io_soulstruct_lib`.** I'll eventually add these as Git
-submodules to the repo. (You can update `io_soulstruct_lib/soulstruct` yourself using the [Soulstruct repo](https://github.com/Grimrukh/soulstruct), but 
-as `soulstruct-havok` isn't public yet, this will be impossible to update.)
+**Do not** install under `Program Files` — Soulstruct may fail to enable with a `PermissionError`.
 
-Whenever you update an add-on in Blender, you will need to either restart Blender (recommended) or call the 
-`Reload Scripts` function from Blender.
+## team-cereus fork (recommended — from Git)
+
+### 1. Clone with submodules
+
+```bash
+git clone --recurse-submodules git@github.com:team-cereus/soulstruct-blender.git
+cd soulstruct-blender
+# if you already cloned without submodules:
+git submodule update --init --recursive
+```
+
+Remotes: [soulstruct-blender](https://github.com/team-cereus/soulstruct-blender),
+[soulstruct](https://github.com/team-cereus/soulstruct),
+[soulstruct-havok](https://github.com/team-cereus/soulstruct-havok).
+
+### 2. Wire into Blender
+
+Pick **one** method.
+
+**A. Junction / symlink (best for daily dev on Windows)** — edits in the repo appear in Blender immediately:
+
+```powershell
+$addons = "$env:APPDATA\Blender Foundation\Blender\5.1\scripts\addons"
+$repo   = "S:\path\to\soulstruct-blender"   # your clone
+
+cmd /c mklink /J "$addons\io_soulstruct"     "$repo\io_soulstruct"
+cmd /c mklink /J "$addons\io_soulstruct_lib" "$repo\io_soulstruct_lib"
+```
+
+Use your Blender version folder (`4.1`, `5.1`, …) instead of `5.1` if needed. Remove any old copied `io_soulstruct`
+folders before linking.
+
+**B. Copy install script** — copies add-on + libraries into the add-ons directory:
+
+```bash
+python install_addon.py --addons-dir "%APPDATA%\Blender Foundation\Blender\5.1\scripts\addons"
+```
+
+Re-run after pulling updates (or use junctions to avoid copying).
+
+**C. Manual copy** — copy the repo folders `io_soulstruct` and `io_soulstruct_lib` (including populated
+`io_soulstruct_lib/soulstruct` and `io_soulstruct_lib/soulstruct-havok` submodule contents) into `scripts/addons/`.
+
+### 3. Enable in Blender
+
+1. `Edit → Preferences → Add-ons`
+2. Search **Soulstruct**, enable **Import-Export: Soulstruct**
+3. If import fails, confirm `io_soulstruct_lib/soulstruct/src` exists next to `io_soulstruct`
+
+Press **N** in the 3D View — tabs include **FLVER**, **Animation**, and **Stan's Tools** (team-cereus fork).
+
+### 4. After `git pull`
+
+Restart Blender, or **Scripting → Reload Scripts**. Submodule updates: `git submodule update --init --recursive`.
+
+More detail: [`DEV_ER_ANIMATION.md`](DEV_ER_ANIMATION.md) §2 (junction layout), [`docs/STAN_TOOLS_WORKFLOW.md`](docs/STAN_TOOLS_WORKFLOW.md).
+
+## Release zip (upstream-style)
+
+Official [Releases](https://github.com/Grimrukh/soulstruct-blender/releases) may lag this fork. If you use a zip anyway:
+
+1. Download the release `.zip`
+2. Unzip into `scripts/addons/` so `io_soulstruct` and `io_soulstruct_lib` are siblings
+3. Enable the add-on as above
 
 Add-ons directory (you may have other add-ons and files here, like I do):
 ![addons_dir.png](images/addons_dir.png)
